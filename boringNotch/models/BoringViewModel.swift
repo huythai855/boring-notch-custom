@@ -189,8 +189,16 @@ class BoringViewModel: NSObject, ObservableObject {
         return false
     }
 
+    var expandedNotchSize: CGSize { coordinator.currentView == .chat ? chatNotchSize : openNotchSize }
+
+    func updateOpenSize() {
+        guard notchState == .open else { return }
+        notchSize = expandedNotchSize
+    }
+
     func open() {
-        self.notchSize = openNotchSize
+        guard notchState != .open else { return }
+        self.notchSize = expandedNotchSize
         self.notchState = .open
         
         // Force music information update when notch is opened

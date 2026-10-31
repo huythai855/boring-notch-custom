@@ -80,6 +80,9 @@ struct ContentView: View {
         return chinWidth
     }
 
+    private var chatExpanded: Bool { vm.notchState == .open && coordinator.currentView == .chat }
+    private var chatHasKeyboard: Bool { chatExpanded && NSApp.keyWindow is BoringNotchSkyLightWindow }
+
     var body: some View {
         // Calculate scale based on gesture progress only
         let gestureScale: CGFloat = {
@@ -118,12 +121,13 @@ struct ContentView: View {
                     )
                 
                 mainLayout
-                    .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
+                    .frame(height: vm.notchState == .open ? vm.expandedNotchSize.height : nil)
                     .conditionalModifier(true) { view in
                         let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
                         let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
                         
                         return view
+                            .animation(.smooth(duration: 0.24), value: coordinator.currentView)
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
                             .animation(.smooth, value: gestureProgress)
                     }
@@ -153,7 +157,7 @@ struct ContentView: View {
                                 try? await Task.sleep(for: .milliseconds(100))
                                 guard !Task.isCancelled else { return }
                                 await MainActor.run {
-                                    if self.vm.notchState == .open && !self.isHovering && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose {
+                                    if self.vm.notchState == .open && !self.isHovering && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose && !chatHasKeyboard {
                                         self.vm.close()
                                     }
                                 }
@@ -168,13 +172,13 @@ struct ContentView: View {
                         }
                     }
                     .onChange(of: vm.isBatteryPopoverActive) {
-                        if !vm.isBatteryPopoverActive && !isHovering && vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
+                        if !vm.isBatteryPopoverActive && !isHovering && vm.notchState == .open && !SharingStateManager.shared.preventNotchClose && !chatHasKeyboard {
                             hoverTask?.cancel()
                             hoverTask = Task {
                                 try? await Task.sleep(for: .milliseconds(100))
                                 guard !Task.isCancelled else { return }
                                 await MainActor.run {
-                                    if !self.vm.isBatteryPopoverActive && !self.isHovering && self.vm.notchState == .open && !SharingStateManager.shared.preventNotchClose {
+                                    if !self.vm.isBatteryPopoverActive && !self.isHovering && self.vm.notchState == .open && !SharingStateManager.shared.preventNotchClose && !chatHasKeyboard {
                                         self.vm.close()
                                     }
                                 }
@@ -203,7 +207,22 @@ struct ContentView: View {
             }
         }
         .padding(.bottom, 8)
-        .frame(maxWidth: windowSize.width, maxHeight: windowSize.height, alignment: .top)
+        .frame(width: windowSize.width, height: windowSize.height, alignment: .top)
+        .background(NotchChatWindowAccess(active: chatExpanded))
+        .onChange(of: coordinator.currentView) { _, _ in
+            vm.updateOpenSize()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openIntegratedChat)) { _ in
+            guard vm.screenUUID == nil || vm.screenUUID == NSScreen.main?.displayUUID else { return }
+            coordinator.currentView = .chat
+            vm.open()
+        }
+        .onExitCommand { vm.close() }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { note in
+            guard chatExpanded, !isHovering, let window = note.object as? NSWindow,
+                  window.screen?.displayUUID == vm.screenUUID else { return }
+            vm.close()
+        }
         .compositingGroup()
         .scaleEffect(
             x: gestureScale,
@@ -235,7 +254,7 @@ struct ContentView: View {
                 }
 
                 vm.dropEvent = false
-                if !SharingStateManager.shared.preventNotchClose {
+                if !SharingStateManager.shared.preventNotchClose && !chatHasKeyboard {
                     vm.close()
                 }
             }
@@ -349,6 +368,9 @@ struct ContentView: View {
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .shelf:
                         ShelfView()
+                    case .chat:
+                        ChatWorkspace()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
                 .transition(
@@ -549,7 +571,7 @@ struct ContentView: View {
                         self.isHovering = false
                     }
                     
-                    if self.vm.notchState == .open && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose {
+                    if self.vm.notchState == .open && !self.vm.isBatteryPopoverActive && !SharingStateManager.shared.preventNotchClose && !chatHasKeyboard {
                         self.vm.close()
                     }
                 }
@@ -657,4 +679,54 @@ struct GeneralDropTargetDelegate: DropDelegate {
     return ContentView()
         .environmentObject(vm)
         .frame(width: vm.notchSize.width, height: vm.notchSize.height)
+}
+
+/// Enable keyboard focus in the existing, fixed-size backing window. Visual
+/// expansion belongs exclusively to the top-aligned SwiftUI notch surface.
+struct NotchChatWindowAccess: NSViewRepresentable {
+    var active: Bool
+    func makeNSView(context: Context) -> AccessView { AccessView() }
+    func updateNSView(_ view: AccessView, context: Context) {
+        view.configure(active: active)
+    }
+
+    final class AccessView: NSView {
+        private var active = false
+        private var appliedActive = false
+        private var previousApp: NSRunningApplication?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            configure(active: active)
+        }
+
+        func configure(active: Bool) {
+            self.active = active
+            DispatchQueue.main.async { [weak self] in self?.apply() }
+        }
+
+        private func apply() {
+            guard let window = window as? BoringNotchSkyLightWindow else { return }
+            guard appliedActive != active else { return }
+            appliedActive = active
+            window.chatEditingEnabled = active
+            if active {
+                let front = NSWorkspace.shared.frontmostApplication
+                if front?.processIdentifier != ProcessInfo.processInfo.processIdentifier { previousApp = front }
+                window.styleMask.remove(.nonactivatingPanel)
+                window.becomesKeyOnlyIfNeeded = false
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+                NotificationCenter.default.post(name: .chatComposerFocusRequested, object: nil)
+            } else {
+                window.endEditing(for: nil)
+                window.resignKey()
+                window.styleMask.insert(.nonactivatingPanel)
+                if NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier {
+                    previousApp?.activate()
+                }
+                previousApp = nil
+            }
+        }
+    }
 }

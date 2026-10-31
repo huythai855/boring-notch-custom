@@ -109,6 +109,7 @@ class BoringNotchSkyLightWindow: NSPanel {
     
     private var observers: Set<AnyCancellable> = []
     
-    override var canBecomeKey: Bool { false }
+    var chatEditingEnabled = false
+    override var canBecomeKey: Bool { chatEditingEnabled }
     override var canBecomeMain: Bool { false }
 }

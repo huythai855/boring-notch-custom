@@ -1,199 +1,184 @@
-<h1 align="center">
-  <br>
-  <a href="http://theboring.name"><img src="https://framerusercontent.com/images/RFK4vs0kn8pRMuOO58JeyoemXA.png?scale-down-to=256" alt="Boring Notch" width="150"></a>
-  <br>
-  Boring Notch
-  <br>
-</h1>
+# Boring Notch Chat — bản fork cá nhân
 
+Chat nhanh Messenger và Zalo **ngay trong notch**, dùng giao diện SwiftUI native.
+Bản fork dựa trên [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch).
+Thông tin và credits của dự án gốc giữ tại [README.upstream.md](README.upstream.md); giấy phép giữ nguyên trong [LICENSE](LICENSE).
 
-<p align="center">
-  <a title="Crowdin" target="_blank" href="https://crowdin.com/project/boring-notch"><img src="https://badges.crowdin.net/boring-notch/localized.svg"></a>
-  <img src="https://github.com/TheBoredTeam/boring.notch/actions/workflows/cicd.yml/badge.svg" alt="TheBoringNotch Build & Test" style="margin-right: 10px;" />
-  <a href="https://discord.gg/c8JXA7qrPm">
-    <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/c8JXA7qrPm?style=flat" alt="Discord Badge" />
-  </a>
-  <a href="https://www.ko-fi.com/alexander5015">
-    <img src="https://srv-cdn.himpfen.io/badges/kofi/kofi-flat.svg" alt="Ko-Fi" />
-  </a>
-</p>
+Mốc hiện tại: **01/11/2026**, nhánh `feature/notch-chat`. Đây là checkout Git local;
+chưa tạo fork hoặc đẩy code lên GitHub.
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/14815?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-14815" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/14815" alt="TheBoredTeam%2Fboring.notch |    Trendshift" width="250" height="55"/></a>
-</p>
-<!--Welcome to **Boring.Notch**, the coolest way to make your MacBook's notch the star of the show! Forget about those boring status bars—our notch turns into a dynamic music control center, complete with a snazzy visualizer and all the music controls you need. It's like having a mini concert right at the top of your screen! -->
+## Hiện đã có
 
-Say hello to **Boring Notch**, the coolest way to make your MacBook’s notch the star of the show! Say goodbye to boring status bars: with Boring Notch, your notch transforms into a dynamic music control center, complete with a vibrant visualizer and all the essential music controls you need. But that’s just the start! Boring Notch also offers calendar integration, a handy file shelf with AirDrop support, a complete MacOS HUD replacement and more!
+- Tab **Chat** cạnh Home/Shelf, nằm trong cùng cửa sổ và hình notch.
+- Chọn Messenger/Zalo, chọn hội thoại, đọc và gửi tin nhắn văn bản.
+- Enter để gửi, Shift+Enter để xuống dòng; Enter khi IME còn đang ghép chữ dành cho IME.
+- Bản nháp riêng theo dịch vụ/hội thoại, giữ khi đổi tab hoặc thu gọn notch trong cùng lần chạy app.
+- Chat cao mặc định **380 pt**; chuyển Home ↔ Chat animate **0,24 giây**, giữ khung cửa sổ ổn định.
+- Daemon riêng giữ WebView và phiên đăng nhập; không cần bật VS Code hoặc cài extension.
+- Bấm **Kết nối** mới mở cửa sổ web để đăng nhập/kích hoạt lại phiên.
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/2d5f69c1-6e7b-4bc2-a6f1-bb9e27cf88a8" alt="Demo GIF" />
-</p>
+Đây là bản thử nghiệm dùng cá nhân. Adapter đọc và thao tác DOM của website gốc,
+không gọi Business API, không sửa CSS/giao diện Messenger hoặc Zalo. Website thay đổi
+cấu trúc có thể làm adapter ngừng hoạt động.
 
-<!--https://github.com/user-attachments/assets/19b87973-4b3a-4853-b532-7e82d1d6b040-->
----
-<!--## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-- [Roadmap](#-roadmap)
-- [Building from Source](#building-from-source)
-- [Contributing](#-contributing)
-- [Join our Discord Server](#join-our-discord-server)
-- [Star History](#star-history)
-- [Buy us a coffee!](#buy-us-a-coffee)
-- [Acknowledgments](#-acknowledgments)-->
+## Cách sử dụng
 
-## Installation
+1. Mở **Boring Notch Chat.app**. Chỉ chạy một bản notch tại một thời điểm.
+2. Đưa chuột lên notch, chọn biểu tượng **Chat** (hai bong bóng).
+3. Chọn **Messenger** hoặc **Zalo**, bấm **Kết nối** nếu chưa đăng nhập.
+4. Đăng nhập trực tiếp trong cửa sổ của dịch vụ; nhập mật khẩu/OTP tại đó.
+5. Đóng cửa sổ kết nối sau khi đăng nhập: thao tác này chỉ ẩn WebView, không đăng xuất.
+6. Chọn hội thoại trên hàng avatar, nhập nội dung rồi bấm gửi hoặc Enter.
+7. Escape để thu gọn; Home/Shelf để trở về chức năng khác. Chat giữ mở khi đang nhận focus bàn phím.
 
-**System Requirements:**
-- macOS **14 Sonoma** or later
-- Apple Silicon or Intel Mac
+Phiên được giữ bằng website storage và cookie local, nhưng dịch vụ vẫn có thể hết hạn
+hoặc thu hồi phiên. Bản nháp native hiện **không lưu qua việc thoát/restart app**.
 
----
+## Yêu cầu build
 
-### Option 1: Download and Install Manually
+- macOS 14 trở lên theo deployment target; đã kiểm tra thực tế trên **macOS 26.5.2, Apple Silicon, Xcode 26.5**.
+- **Xcode đầy đủ** và Command Line Tools trỏ vào Xcode. CLI tools riêng đủ cho helper,
+  nhưng không đủ để build toàn bộ dự án Xcode và asset catalog.
+- Internet cho lần tải Swift Package đầu tiên.
+- Node.js/npm chỉ cần nếu chạy các bài kiểm tra JavaScript.
 
-<a href="https://github.com/TheBoredTeam/boring.notch/releases/latest/download/boringNotch.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
+Script build tích hợp hiện chọn **arm64**; chưa xác minh bản fork trên Intel.
+Không cần tài khoản Apple Developer: bản local ký ad hoc.
 
-Once downloaded, open the `.dmg` and move **Boring Notch** to your `/Applications` folder.
-
-> [!IMPORTANT]
-> We don't have an Apple Developer account (yet 👀), so macOS will warn you that Boring Notch is from an unidentified developer on first launch. This is expected behavior.
->
-> You'll need to bypass this before the app will open. You only need to do this once. Use one of the methods below.
-
----
-
-#### Recommended: Terminal (Always Works)
-
-This is the quickest and easiest method. It only requires a single command and works consistently for all users. System Settings can sometimes fail and won't work for non-admin users.
-
-After moving Boring Notch to your Applications folder, run:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Boring Notch.app"
+```sh
+xcode-select -p
+xcodebuild -version
 ```
 
-Then open the app normally.
+Nếu đang trỏ vào `/Library/Developer/CommandLineTools`, chọn Xcode đã cài:
 
----
-
-#### Alternative: System Settings
-
-> [!NOTE]
-> This method doesn't work for all users. If this doesn't work, use the Terminal method above.
-
-1. Try to open the app — you'll see a security warning.
-2. Click **OK** to dismiss it.
-3. Open **System Settings** > **Privacy & Security**.
-4. Scroll to the bottom and click **Open Anyway** next to the Boring Notch warning.
-5. Confirm if prompted.
-
----
-
-### Option 2: Install via Homebrew
-
-You can also install using [Homebrew](https://brew.sh). The Homebrew installation automatically bypasses the macOS security warning described above.
-
-```bash
-brew install --cask TheBoredTeam/boring-notch/boring-notch
+```sh
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
 ```
 
-## Usage
+Mở Xcode một lần để hoàn thành bước thiết lập nếu cần.
 
-- Launch the app, and voilà—your notch is now the coolest part of your screen.
-- Hover over the notch to see it expand and reveal all its secrets.
-- Use the controls to manage your music like a rockstar.
-- Click the star in your menu bar to customize your notch to your heart's content.
+## Build
 
-## 📋 Roadmap
-- [x] Playback live activity 🎧
-- [x] Calendar integration 📆
-- [x] Reminders integration ☑️
-- [x] Mirror 📷
-- [x] Charging indicator and current percentage 🔋
-- [x] Customizable gesture control 👆🏻
-- [x] Shelf functionality with AirDrop 📚
-- [x] Notch sizing customization, finetuning on different display sizes 🖥️
-- [x] System HUD replacements (volume, brightness, backlight) 🎚️💡⌨️
-- [ ] Bluetooth Live Activity (connect/disconnect for bluetooth devices) 
-- [ ] Weather integration ⛅️
-- [ ] Customizable Layout options 🛠️
-- [ ] Lock Screen Widgets 🔒
-- [ ] Extension system 🧩
-- [ ] Notifications (under consideration) 🔔
-<!-- - [ ] Clipboard history manager 📌 `Extension` -->
-<!-- - [ ] Download indicator of different browsers (Safari, Chromium browsers, Firefox) 🌍 `Extension`-->
-<!-- - [ ] Customizable function buttons 🎛️ -->
-<!-- - [ ] App switcher 🪄 -->
+Chạy tại thư mục repository:
 
-<!-- ## 🧩 Extensions
-> [!NOTE]
-> We’re hard at work on some awesome extensions! Stay tuned, and we’ll keep you updated as soon as they’re released. -->
+```sh
+bash Tools/build-chat-fork.sh
+```
 
-## Building from Source
+Script build/ký `build/Notch Chat Daemon.app` trước, rồi build host bằng Xcode.
+Nếu mở dự án bằng Xcode để build thủ công, cũng cần chạy
+`bash Tools/ChatDaemon/build.sh` trước vì project nhúng helper từ `build/`.
 
-### Prerequisites
+Log: `build/daemon-build.log` và `build/integrated-build.log`.
+Host mặc định ở DerivedData của Xcode. Có thể tìm thư mục sản phẩm bằng:
 
-- **macOS 15.6 or later**
-- **Xcode 26 or later**
+```sh
+xcodebuild -project boringNotch.xcodeproj -scheme boringNotch \
+  -configuration Debug -destination 'platform=macOS,arch=arm64' \
+  -showBuildSettings | sed -n 's/^[[:space:]]*BUILT_PRODUCTS_DIR = //p' | head -n 1
+```
 
-### Installation
+Trong thư mục kết quả, sản phẩm tên **Boring Notch.app**.
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/TheBoredTeam/boring.notch.git
-   cd boring.notch
-   ```
+## Cài hoặc cập nhật bản local
 
-2. **Open the Project in Xcode**:
-   ```bash
-   open boringNotch.xcodeproj
-   ```
+1. Thoát bản notch đang chạy bằng Quit; bản gốc và fork đang dùng cùng bundle ID,
+   nên không nên chạy đồng thời.
+2. Nếu có sửa helper/`ChatBridge.js`, mở cửa sổ **Kết nối**, chọn menu
+   **Notch Chat Daemon → Quit Chat Daemon** trước khi thay app. Helper cũ có thể tiếp tục
+   chạy sau khi host đã thoát. Nếu chỉ sửa host/UI, có thể giữ daemon đang chạy.
+3. Copy **toàn bộ** sản phẩm Xcode sang `/Applications/Boring Notch Chat.app`.
+   Thay đường dẫn nguồn bên dưới bằng thư mục sản phẩm vừa tìm:
 
-3. **Build and Run**:
-    - Click the "Run" button or press `Cmd + R`. Watch the magic unfold!
+```sh
+ditto "/đường/dẫn/Build/Products/Debug/Boring Notch.app" \
+  "/Applications/Boring Notch Chat.app"
+codesign --verify --deep --strict "/Applications/Boring Notch Chat.app"
+open "/Applications/Boring Notch Chat.app"
+```
 
-## 🤝 Contributing
+Không ghi đè app gốc `/Applications/boringNotch.app`. Fork đã tắt khởi động
+Sparkle updater để tránh bản upstream thay mất tính năng chat. Nếu muốn quay lại
+bản gốc, thoát fork rồi mở app gốc. Profile không bị xóa khi thay bản build.
 
-We’re all about good vibes and awesome contributions! Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn how you can join the fun!
+## Kiểm tra
 
-## Join our Discord Server
+Các test dưới đây chạy local, không đăng nhập và không gửi tin nhắn thật:
 
-<a href="https://discord.gg/GvYcYpAKTu" target="_blank"><img src="https://iili.io/28m3GHv.png" alt="Join The Boring Server!" style="height: 60px !important;width: 217px !important;" ></a>
+```sh
+mkdir -p build
+npm install --prefix build/chat-tests --ignore-scripts --no-audit --no-fund jsdom@26.1.0
+node Tests/ChatDaemon/bridge.test.cjs
+node Tests/ChatDaemon/messages.test.cjs
+node Tests/ChatDaemon/zalo.test.cjs
+xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift \
+  Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
+build/rpc-tests
+```
 
-## Star History
-<!-- BROKEN: GitHub now restricts the stargazer API for privacy reasons
-<a href="https://www.star-history.com/#TheBoredTeam/boring.notch&Timeline">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline" />
- </picture>
-</a>
--->
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/TheBoredTeam/org-star-chart-updater/main/projects/boring.notch/chart-dark.svg">
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/TheBoredTeam/org-star-chart-updater/main/projects/boring.notch/chart-light.svg">
-   <img src="https://raw.githubusercontent.com/TheBoredTeam/org-star-chart-updater/main/projects/boring.notch/chart-light.svg" alt="TheBoredTeam/boring.notch GitHub star history">
- </picture>
+Fixture kiểm tra bàn phím với client giả, không kết nối tài khoản:
 
-## Support us on Ko-fi!
-<!-- <a href="https://www.buymeacoffee.com/jfxh67wvfxq" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-red.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a> -->
-<a href="https://www.ko-fi.com/alexander5015" target="_blank"><img src="https://github.com/user-attachments/assets//a76175ef-7e93-475a-8b67-4922ba5964c2" alt="Support us on Ko-fi" style="height: 70px !important;width: 346px !important;" ></a>
+```sh
+bash Tests/ChatDaemon/build-focus-test.sh
+open "build/Notch Focus Test.app"
+```
 
-## 🎉 Acknowledgments
+Sau khi sửa UI, kiểm tra thêm trên bản thật: Home ↔ Chat, thu gọn/mở lại,
+gõ tiếng Việt, giữ bản nháp khi đổi tab, Enter/Shift+Enter trong fixture.
+Nếu kiểm tra gửi thật, dùng hội thoại của chính mình và kiểm tra kết quả trước khi gửi lại.
 
-We would like to express our gratitude to the authors and maintainers of the open-source projects that made this possible. 
+## Lỗi thường gặp
 
-## Notable Projects
-- **[MediaRemoteAdapter](https://github.com/ungive/mediaremote-adapter)** –  An open-source project that allowed us to use the Now Playing source in macOS 15.4+
-- **[NotchDrop](https://github.com/Lakr233/NotchDrop)** – An open-source project that has been instrumental in developing the first version of the "Shelf" feature in Boring Notch.
+| Hiện tượng | Cách xử lý |
+| --- | --- |
+| Zalo yêu cầu kích hoạt hoặc ngừng cập nhật | Kết nối → **Kích hoạt**. Zalo có thể tạm dừng khi tab khác hoạt động hoặc để lâu. |
+| Chưa đăng nhập/hết phiên | Mở Kết nối và đăng nhập lại tại website. |
+| Timeout khi gửi | Kiểm tra hội thoại trong cửa sổ web trước. App không tự gửi lại vì có nguy cơ trùng tin. |
+| Website đã có bản nháp khác | Mở Kết nối, xử lý bản nháp web trước; daemon không ghi đè bản nháp khác. |
+| Sửa bridge nhưng hành vi vẫn cũ | Thoát daemon cũ, build lại, thay toàn bộ app rồi mở lại. |
+| Thiếu Chat Daemon hoặc build resource không tồn tại | Chạy `bash Tools/build-chat-fork.sh`, không chỉ build host. |
+| Không gõ được/chữ vào app khác | Chọn tab Chat và click ô nhập; kiểm tra đang chạy đúng bản fork mới. |
+| Website đổi markup, không đọc/chọn/gửi được | Kiểm tra adapter tại `Tools/ChatDaemon/ChatBridge.js`; đừng thêm cơ chế tự retry gửi. |
 
-For a full list of licenses and attributions, please see the [Third-Party Licenses](./THIRD_PARTY_LICENSES.md) file.
+## Kiến trúc và nơi sửa code
 
-### Icon credits: [@maxtron95](https://github.com/maxtron95)
-### Website credits: [@himanshhhhuv](https://github.com/himanshhhhuv)
+```text
+Tab Chat / SwiftUI → ChatDaemonClient → HTTP RPC local có token
+                                         ↓
+                               Notch Chat Daemon
+                                         ↓
+                         WKWebView + DOM adapter riêng
+                                  Messenger / Zalo
+```
 
-- **SwiftUI**: For making us look like coding wizards.
-- **You**: For being awesome and checking out **boring.notch**!
+| Thành phần | File |
+| --- | --- |
+| Giao diện, composer, Enter/Shift+Enter | `Shared/Chat/NativeChatView.swift` |
+| Client RPC, polling, bản nháp trong RAM | `Shared/Chat/ChatDaemonClient.swift` |
+| DTO và đường dẫn dữ liệu | `Shared/Chat/ChatProtocol.swift` |
+| Entry point menu/notification, không tạo panel riêng | `Shared/Chat/ChatPanelController.swift` |
+| Nhúng Chat, animation, focus cửa sổ | `boringNotch/ContentView.swift` |
+| Chiều cao mặc định | `chatNotchSize` trong `boringNotch/sizing/matters.swift` |
+| Tab và model kích thước | `boringNotch/components/Tabs/`, `boringNotch/models/BoringViewModel.swift` |
+| DOM selector, nội dung tin, thao tác chọn/gửi | `Tools/ChatDaemon/ChatBridge.js` |
+| WebView, polling gửi/chọn bằng Swift | `Tools/ChatDaemon/DaemonWebSession.swift` |
+| HTTP parser và bảo vệ RPC | `Tools/ChatDaemon/LocalRPC.swift` |
+| Cookie phiên local | `Tools/ChatDaemon/SessionCookies.swift` |
 
+Chi tiết kỹ thuật và các lần kiểm chứng: [docs/chat-daemon.md](docs/chat-daemon.md).
+Mốc để tiếp tục lần sau: [docs/development-checkpoint.md](docs/development-checkpoint.md).
+`Tools/ChatProbe` là công cụ thử riêng, không phải UI chính tích hợp notch.
+
+## Dữ liệu và giới hạn
+
+- RPC chỉ lắng nghe `127.0.0.1`, port ngẫu nhiên, bearer token mỗi lần daemon chạy;
+  từ chối browser Origin. Không có server cloud riêng của fork.
+- Discovery: `~/.local/share/notch-chat-daemon/endpoint/daemon.json`.
+- Cookie phiên: `~/.local/share/notch-chat-daemon/profile/session-cookies.plist`.
+  Thư mục 0700, file 0600; đây là dữ liệu nhạy cảm, **không commit/chia sẻ**.
+- WebKit còn giữ website storage riêng của daemon. Cookie không đi qua RPC.
+- Chỉ đọc các hội thoại/tin nhắn website đã tải; chưa hỗ trợ toàn bộ lịch sử,
+  file đính kèm, gọi điện, reactions, badge thông báo hay delivery receipt đầy đủ.
+- Thao tác gửi thành công xác nhận website đã nhận thao tác, không bảo đảm người nhận đã nhận/đọc.
+- `build/` chứa artifact, log và ảnh kiểm tra cá nhân, được Git ignore.

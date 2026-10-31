@@ -14,7 +14,11 @@ let batterySneakSize: CGSize = .init(width: 160, height: 1)
 
 let shadowPadding: CGFloat = 20
 let openNotchSize: CGSize = .init(width: 640, height: 190)
-let windowSize: CGSize = .init(width: openNotchSize.width, height: openNotchSize.height + shadowPadding)
+let chatNotchSize: CGSize = .init(width: openNotchSize.width, height: 380)
+// Keep the transparent backing window stable. Only the top-aligned notch
+// surface animates; resizing NSWindow during a SwiftUI transition relays out
+// the hosting view a second time and visibly jumps the header/composer.
+let windowSize: CGSize = .init(width: openNotchSize.width, height: chatNotchSize.height + shadowPadding)
 let cornerRadiusInsets: (opened: (top: CGFloat, bottom: CGFloat), closed: (top: CGFloat, bottom: CGFloat)) = (opened: (top: 19, bottom: 24), closed: (top: 6, bottom: 14))
 
 enum MusicPlayerImageSizes {

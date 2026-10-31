@@ -1,0 +1,70 @@
+import Foundation
+import Darwin
+
+enum ChatService: String, CaseIterable, Codable, Identifiable {
+    case messenger = "Messenger", zalo = "Zalo"
+    var id: String { rawValue }
+    var url: URL { URL(string: self == .messenger ? "https://www.messenger.com/" : "https://chat.zalo.me/")! }
+}
+
+struct ChatThread: Codable, Identifiable {
+    var id: String
+    var name: String
+    var preview: String
+    var avatar: String?
+}
+
+struct ChatMessage: Codable, Identifiable {
+    var id: String
+    var text: String
+    var outgoing: Bool
+}
+
+struct ChatSnapshot: Codable {
+    var service: ChatService
+    var state: String
+    var title: String
+    var threads: [ChatThread]
+    var messages: [ChatMessage]
+    var activeID: String?
+    var canSend: Bool
+    var detail: String?
+    var diagnostics: [String: Int]?
+
+    static func empty(_ service: ChatService, _ state: String = "connecting") -> Self {
+        Self(service: service, state: state, title: service.rawValue, threads: [], messages: [], canSend: false)
+    }
+}
+
+struct ChatRPCRequest: Codable {
+    var operation: String
+    var service: ChatService
+    var threadID: String?
+    var text: String?
+}
+
+struct ChatRPCResponse: Codable {
+    var ok: Bool
+    var snapshot: ChatSnapshot?
+    var error: String?
+    var diagnostics: [String: String]?
+}
+
+struct ChatDaemonEndpoint: Codable {
+    var port: UInt16
+    var token: String
+    var pid: Int32
+}
+
+enum ChatDaemonPaths {
+    // A shared discovery directory avoids cross-app container protection. The
+    // sandboxed client has a read-only exception for endpoint/ only, not profile/.
+    static var directory: URL {
+        let home = String(cString: getpwuid(getuid())!.pointee.pw_dir)
+        return URL(fileURLWithPath: home).appendingPathComponent(
+            ".local/share/notch-chat-daemon", isDirectory: true)
+    }
+    static var discoveryDirectory: URL { directory.appendingPathComponent("endpoint", isDirectory: true) }
+    static var profileDirectory: URL { directory.appendingPathComponent("profile", isDirectory: true) }
+    static var endpoint: URL { discoveryDirectory.appendingPathComponent("daemon.json") }
+}

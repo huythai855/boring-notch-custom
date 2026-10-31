@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AABBCC112233445566770010 /* Notch Chat Daemon.app in Resources */ = {isa = PBXBuildFile; fileRef = AABBCC112233445566770009 /* Notch Chat Daemon.app */; };
+		AABBCC112233445566770008 /* ChatDaemonClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC112233445566770007 /* ChatDaemonClient.swift */; };
+		AABBCC112233445566770006 /* ChatProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC112233445566770005 /* ChatProtocol.swift */; };
+		AABBCC112233445566770004 /* ChatPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC112233445566770003 /* ChatPanelController.swift */; };
+		AABBCC112233445566770002 /* NativeChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCC112233445566770001 /* NativeChatView.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
 		110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */; };
 		1100292A2E8691B400035A57 /* FileShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029292E8691B400035A57 /* FileShareView.swift */; };
@@ -181,6 +186,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AABBCC112233445566770009 /* Notch Chat Daemon.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; path = "build/Notch Chat Daemon.app"; sourceTree = SOURCE_ROOT; };
+		AABBCC112233445566770007 /* ChatDaemonClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/Chat/ChatDaemonClient.swift"; sourceTree = SOURCE_ROOT; };
+		AABBCC112233445566770005 /* ChatProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/Chat/ChatProtocol.swift"; sourceTree = SOURCE_ROOT; };
+		AABBCC112233445566770003 /* ChatPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Chat/ChatPanelController.swift; sourceTree = SOURCE_ROOT; };
+		AABBCC112233445566770001 /* NativeChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Chat/NativeChatView.swift; sourceTree = SOURCE_ROOT; };
 		1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSItemProvider+LoadHelpers.swift"; sourceTree = "<group>"; };
 		110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFileStorageService.swift; sourceTree = "<group>"; };
 		110029292E8691B400035A57 /* FileShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileShareView.swift; sourceTree = "<group>"; };
@@ -541,6 +551,11 @@
 		14CEF4092C5CAED200855D72 = {
 			isa = PBXGroup;
 			children = (
+				AABBCC112233445566770009 /* Notch Chat Daemon.app */,
+				AABBCC112233445566770007 /* ChatDaemonClient.swift */,
+				AABBCC112233445566770005 /* ChatProtocol.swift */,
+				AABBCC112233445566770003 /* ChatPanelController.swift */,
+				AABBCC112233445566770001 /* NativeChatView.swift */,
 				112B0EB62E30DD0F00562D6C /* mediaremote-adapter */,
 				14CEF4142C5CAED300855D72 /* boringNotch */,
 				11F748502EC9AABA00F841DB /* BoringNotchXPCHelper */,
@@ -882,6 +897,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AABBCC112233445566770010 /* Notch Chat Daemon.app in Resources */,
 				14CEF41D2C5CAED400855D72 /* Preview Assets.xcassets in Resources */,
 				14CEF41A2C5CAED400855D72 /* Assets.xcassets in Resources */,
 				112B0EB82E30DD0F00562D6C /* MediaRemoteAdapterTestClient in Resources */,
@@ -905,6 +921,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AABBCC112233445566770008 /* ChatDaemonClient.swift in Sources */,
+				AABBCC112233445566770006 /* ChatProtocol.swift in Sources */,
+				AABBCC112233445566770004 /* ChatPanelController.swift in Sources */,
+				AABBCC112233445566770002 /* NativeChatView.swift in Sources */,
 				115C12EC2ED3D003009754CA /* OpenNotchHUD.swift in Sources */,
 				14C08BB92C8DE4B1000F8AA0 /* BoringCalendar.swift in Sources */,
 				5955950D2E900ED800C66711 /* ApplicationRelauncher.swift in Sources */,
