@@ -185,12 +185,15 @@ private struct ChatMessageBubble: View {
         return colors[Int(value % UInt32(colors.count))]
     }
 
-    private var bodyText: Text {
-        guard let runs = message.runs, runs.map(\.text).joined() == message.text else { return Text(message.text) }
-        return runs.reduce(Text("")) { result, run in
-            result + (run.mention
-                ? Text(run.text).foregroundColor(message.outgoing ? .white : .mint).fontWeight(.semibold)
-                : Text(run.text))
+    private var attributedBody: AttributedString {
+        guard let runs = message.runs, runs.map(\.text).joined() == message.text else { return AttributedString(message.text) }
+        return runs.reduce(into: AttributedString()) { result, run in
+            var part = AttributedString(run.text)
+            if run.mention {
+                part.foregroundColor = message.outgoing ? .white : .mint
+                part.font = .system(size: 13, weight: .semibold)
+            }
+            result.append(part)
         }
     }
 
@@ -227,7 +230,16 @@ private struct ChatMessageBubble: View {
                     .padding(.horizontal, 7)
                     .background(.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
                 }
-                bodyText.font(.system(size: 13)).textSelection(.enabled)
+                // Selectable concatenated Text can repeatedly recreate AppKit
+                // selection overlays on macOS 26. Keep rich text flat and offer
+                // an explicit copy action without a per-bubble selection view.
+                Text(attributedBody).font(.system(size: 13))
+                    .contextMenu {
+                        Button("Sao chép tin nhắn") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(message.text, forType: .string)
+                        }
+                    }
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
             .background(message.outgoing ? Color.accentColor : Color.white.opacity(0.12),

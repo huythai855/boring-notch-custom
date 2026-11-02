@@ -110,6 +110,11 @@ the body. Incoming group messages carry the actual author name and use a native
 default avatar. Supported media types have explicit placeholders when no text is
 present.
 
+Native message bodies use one attributed string and an explicit context-menu copy
+action. Per-bubble SwiftUI text-selection overlays can enter an AppKit update loop
+with rich messages on macOS 26.3. The client also compares snapshots before
+publishing unchanged polling results to avoid needless layout and selection work.
+
 Selection waits for the header and sidebar to agree and for the old conversation's
 message fingerprint to change. It then scrolls the message timeline to its end and
 waits for stable rows using native polling. Hidden connections follow the latest

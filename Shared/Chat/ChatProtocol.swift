@@ -13,14 +13,14 @@ enum ChatService: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-struct ChatThread: Codable, Identifiable {
+struct ChatThread: Codable, Identifiable, Equatable {
     var id: String
     var name: String
     var preview: String
     var avatar: String?
 }
 
-struct ChatMessage: Codable, Identifiable {
+struct ChatMessage: Codable, Identifiable, Equatable {
     var id: String
     var text: String
     var outgoing: Bool
@@ -29,17 +29,17 @@ struct ChatMessage: Codable, Identifiable {
     var runs: [ChatTextRun]? = nil
 }
 
-struct ChatReply: Codable {
+struct ChatReply: Codable, Equatable {
     var senderName: String? = nil
     var text: String
 }
 
-struct ChatTextRun: Codable {
+struct ChatTextRun: Codable, Equatable {
     var text: String
     var mention: Bool
 }
 
-struct ChatSnapshot: Codable {
+struct ChatSnapshot: Codable, Equatable {
     var service: ChatService
     var state: String
     var title: String

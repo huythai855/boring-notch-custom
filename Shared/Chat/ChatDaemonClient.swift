@@ -76,8 +76,8 @@ final class ChatDaemonClient: ObservableObject {
         do {
             let result = try await call(.init(operation: "snapshot", service: requestedService))
             guard generation == version, !selecting, !sending else { return }
-            if let value = result.snapshot { snapshot = value }
-            if !hasActionError { error = nil }
+            if let value = result.snapshot, snapshot != value { snapshot = value }
+            if !hasActionError, error != nil { error = nil }
         } catch {
             guard generation == version else { return }
             let failure = error as NSError
