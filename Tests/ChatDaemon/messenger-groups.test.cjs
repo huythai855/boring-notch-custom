@@ -43,4 +43,14 @@ assert.equal(s.messages[0].senderName,null);
 // A collapsed sidebar can still identify groups from multiple distinct senders.
 s = snapshot({sidebar:false, rows:bubble('Lúc 09:31, Anh Huy: Một', 'Một')+bubble('At 09:32, Chị Lan: Hai','Hai')});
 assert.deepEqual(s.messages.map(m=>m.senderName),['Anh Huy','Chị Lan']);
+// Real Messenger also prefixes the clock with a weekday, and reply headings
+// contain both participants. The row's actual author takes precedence.
+s = snapshot({rows:
+  bubble('Lúc Chủ Nhật 12:51ch, Chị Lan: Trả lời', 'Trả lời', '<h4 dir="auto">Chị Lan đã trả lời Anh Huy</h4>') +
+  bubble('Lúc Chủ Nhật 12:52ch, Chị Lan: Tiếp theo', 'Tiếp theo') +
+  bubble('At Sunday 12:53 PM, Anh Minh: Reply', 'Reply', '<h4 dir="auto">Anh Minh replied to Anh Huy</h4>')
+});
+assert.deepEqual(s.messages.map(m=>m.senderName),['Chị Lan','Chị Lan','Anh Minh']);
+s = snapshot({rows:`<div><div data-scope="messages_table"><h4 dir="auto">Chị Lan đã trả lời Anh Huy</h4><div dir="auto">Không có nhãn thời gian</div></div></div>`});
+assert.equal(s.messages[0].senderName,'Chị Lan');
 console.log('Messenger group tests passed: Vietnamese/English labels, dated timestamps, continuation messages, heading fallback, quote isolation, self messages, single-sender groups and direct chats.');

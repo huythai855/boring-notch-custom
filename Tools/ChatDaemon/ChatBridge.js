@@ -275,17 +275,23 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     // Each Messenger message has an accessible timestamp/sender container,
     // including continuation bubbles whose visible sender heading is omitted.
     // Never search a common timeline ancestor: that would borrow another sender.
+    const scopes = [];
     for (let scope = row, depth = 0; scope && depth < 7; scope = scope.parentElement, depth++) {
       if (scope.matches('[role="log"], [role="main"]') ||
           rawAll('[data-scope="messages_table"]', scope).some(e =>
             e !== row && !e.contains(row) && !row.contains(e))) break;
+      scopes.push(scope);
       const label = scope.getAttribute('aria-label') || '';
-      const prefix = label.match(/^(?:Lúc|At)\s+\d{1,2}:\d{2}([^:\n]*):/i);
+      const prefix = label.match(/^(?:Lúc|At)\s+[^:\n]*?\d{1,2}:\d{2}([^:\n]*):/i);
       const accessibleName = prefix?.[1].split(',').pop();
       if (accessibleName) return messengerSenderName(accessibleName);
+    }
+    // Prefer the actual per-message accessible author over headings such as
+    // 'Alice replied to Bob'. Keep headings as a bounded fallback only.
+    for (const scope of scopes) {
       const headings = rawAll('h4, [role="heading"][aria-level="4"]', scope).filter(e =>
         !e.closest('[data-ad-rendering-role="text-message"], blockquote, [role="blockquote"]'));
-      if (headings.length === 1) return messengerSenderName(text(headings[0]));
+      if (headings.length === 1) return messengerSenderName(text(headings[0]).replace(/\s+(?:đã trả lời|replied to)\s+.+$/i, ''));
     }
     return null;
   }
