@@ -53,4 +53,13 @@ s = snapshot({rows:
 assert.deepEqual(s.messages.map(m=>m.senderName),['Chị Lan','Chị Lan','Anh Minh']);
 s = snapshot({rows:`<div><div data-scope="messages_table"><h4 dir="auto">Chị Lan đã trả lời Anh Huy</h4><div dir="auto">Không có nhãn thời gian</div></div></div>`});
 assert.equal(s.messages[0].senderName,'Chị Lan');
+// Localized date separators are metadata, not anonymous incoming messages.
+// The same literal string inside a semantic message remains valid content.
+s = snapshot({rows:
+  '<div data-scope="messages_table"><span dir="auto">22:07 16 Tháng 10, 2026</span></div>' +
+  bubble('Lúc 22:24 16 Tháng 10, 2026, Anh Huy: 22:07 16 Tháng 10, 2026','22:07 16 Tháng 10, 2026')
+});
+assert.equal(s.messages.length,1);
+assert.equal(s.messages[0].text,'22:07 16 Tháng 10, 2026');
+assert.equal(s.messages[0].senderName,'Anh Huy');
 console.log('Messenger group tests passed: Vietnamese/English labels, dated timestamps, continuation messages, heading fallback, quote isolation, self messages, single-sender groups and direct chats.');

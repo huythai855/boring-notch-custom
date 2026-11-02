@@ -321,7 +321,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     if (element.closest('[data-ad-rendering-role="text-message"]')) return false;
     const value = text(element);
     const sender = /^(bạn đã gửi|you sent)$/i.test(value);
-    const clock = /^(?:[01]?\d|2[0-3]):[0-5]\d(?:\s?(?:am|pm|sa|ch))?$/i.test(value);
+    const clock = /^(?:[01]?\d|2[0-3]):[0-5]\d(?:\s?(?:am|pm|sa|ch))?(?:\s+\d{1,2}\s+tháng\s+\d{1,2},?\s+\d{4})?$/i.test(value);
     const receipt = /^(?:đã gửi|đã nhận|đã xem|đang gửi|chưa gửi|sent|sending|delivered|seen|read)(?:\s+(?:(?:lúc\s+)?\d{1,2}:\d{2}|\d+\s+(?:giây|phút|giờ|ngày|tuần|tháng|năm)(?:\s+trước)?|hôm qua|hôm nay|\d+\s*(?:seconds?|minutes?|hours?|days?|s|m|h|d)(?:\s+ago)?))?$/i.test(value);
     if (!sender && !clock && !receipt) return false;
     // Some Messenger receipts have no semantic role. They sit outside the
