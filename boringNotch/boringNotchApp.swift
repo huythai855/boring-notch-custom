@@ -51,6 +51,12 @@ struct DynamicNotchApp: App {
             }
             .keyboardShortcut(KeyEquivalent("Q"), modifiers: .command)
         }
+        .commands {
+            CommandGroup(after: .appInfo) {
+                Button("Open Chat") { ChatPanelController.shared.show() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
+            }
+        }
     }
 }
 

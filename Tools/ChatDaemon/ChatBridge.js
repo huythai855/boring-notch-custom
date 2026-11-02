@@ -24,7 +24,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     const candidates = (rows.length ? rows : all('#pane-side [role="listitem"]')).map(row => {
       const label = first('span[title][dir="auto"]', row) || first('span[title]', row);
       const name = (label?.getAttribute('title') || text(label)).trim();
-      return {row, name, id: 'wa-name:' + encodeURIComponent(name)};
+      return {row, target:label?.closest('[role="gridcell"]') || row, name, id: 'wa-name:' + encodeURIComponent(name)};
     }).filter(e => e.name);
     // WhatsApp's virtualized sidebar does not always expose a contact JID.
     // Require a unique exact label and a matching main header; duplicate names
@@ -47,8 +47,8 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
   }
   function whatsappThreads() {
     targets = new Map();
-    return whatsappEntries().slice(0, 40).map(({row, name, id}) => {
-      targets.set(id, row);
+    return whatsappEntries().slice(0, 40).map(({row, target, name, id}) => {
+      targets.set(id, target);
       const lines = text(row).split('\n').map(s => s.trim()).filter(Boolean);
       const avatar = row.querySelector('img')?.src;
       return {id, name: name.slice(0, 150), preview: lines.filter(s => s !== name).slice(0, 2).join(' · ').slice(0, 250),
@@ -66,14 +66,30 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     return read(element).trim();
   }
   function whatsappMessages() {
-    const bodySelector = '[data-testid="msg-text"], .selectable-text.copyable-text';
-    const quoteSelector = '[data-testid="quoted-message"], [data-testid="quoted-message-text"], [data-testid="quoted-msg"], [data-testid="quoted-text"], [aria-label="Quoted message"], [aria-label="Tin nhắn được trích dẫn"]';
-    return all('#main .message-in, #main .message-out').slice(-50).flatMap((row, index) => {
+    const bodySelector = '[data-testid="msg-text"], [data-testid="selectable-text"], .selectable-text.copyable-text';
+    const quoteSelector = '[data-testid^="quoted-"], [aria-label="Quoted message"], [aria-label="Tin nhắn được trích dẫn"]';
+    const modern = all('#main [data-testid="msg-container"]').filter(e=>!e.querySelector('[data-testid="msg-container"]'));
+    const rows = modern.length ? modern : all('#main .message-in, #main .message-out');
+    return rows.slice(-50).flatMap((row, index) => {
       const nodes = all(bodySelector, row).filter(e => !e.querySelector(bodySelector) && !e.closest(quoteSelector));
       const content = nodes.map(whatsappText).filter(Boolean).join('\n');
       if (!content) return [];
-      return [{id: row.getAttribute('data-id') || row.querySelector('[data-id]')?.getAttribute('data-id') || row.id || hash(content + index),
-        text: content.slice(0, 8000), outgoing: row.classList.contains('message-out')}];
+      let outgoing = !!row.closest('.message-out') || !!row.querySelector('[data-testid="tail-out"], [data-icon="tail-out"]');
+      const incoming = !!row.closest('.message-in') || !!row.querySelector('[data-testid="tail-in"], [data-icon="tail-in"]');
+      if (!outgoing && !incoming) {
+        // Consecutive bubbles can omit their tail. Use the rendered text
+        // alignment inside this conversation, never sender/status strings.
+        const pane = first('#main [data-testid="conversation-panel-messages"]') || first('#main');
+        const bounds = pane?.getBoundingClientRect();
+        if (bounds?.width > 0) {
+          const rects = nodes.map(e=>e.getBoundingClientRect()).filter(r=>r.width > 5 && r.width < bounds.width * .95);
+          const bubble = rects.sort((a,b)=>b.width-a.width)[0];
+          if (bubble) outgoing = bubble.left - bounds.left > bounds.right - bubble.right + 16;
+        }
+      }
+      return [{id: row.getAttribute('data-id') || row.closest('[data-id]')?.getAttribute('data-id') ||
+          row.querySelector('[data-id]')?.getAttribute('data-id') || row.id || hash(content + index),
+        text: content.slice(0, 8000), outgoing}];
     });
   }
   function whatsappSendButton(input) {
@@ -241,7 +257,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     const target = targets.get(id);
     if (!target?.isConnected) throw Error('Hội thoại không còn trong danh sách. Hãy tải lại.');
     if (!allowed()) throw Error('Trang kết nối không hợp lệ.');
-    if (location.hostname === 'chat.zalo.me') zaloClick(target); else target.click();
+    if (location.hostname === 'chat.zalo.me' || whatsapp()) zaloClick(target); else target.click();
     return selectionReady(id);
   }
   const selectionReady = id => allowed() && activeID() === id && !!composer();
@@ -318,11 +334,19 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     // Structural metadata only: no message text, cookies, contact names, or
     // arbitrary script execution. Used to tune provider adapters locally.
     const unique = values => [...new Set(values)].slice(0, 80).join(' | ');
+    const testid = e => (e.getAttribute('data-testid') || '').replace(/^conv-msg-.*/, 'conv-msg-*');
+    const describe = e => e ? {tag:e.tagName,role:e.getAttribute('role'),classes:e.className,
+      testid:testid(e),attributes:e.getAttributeNames()} : null;
     return {
+      whatsappNodes: whatsapp() ? JSON.stringify({
+        testids:unique(all('#main [data-testid]').map(testid)),
+        selectedRows:all('#pane-side [aria-selected="true"]').slice(0,2).map(e=>({node:describe(e),parent:describe(e.parentElement)})),
+        messageNodes:all('#main [data-testid="msg-container"], #main [data-pre-plain-text]').slice(-4).map(e=>({node:describe(e),parent:describe(e.parentElement)}))
+      }) : '{}',
       whatsappStructure: JSON.stringify({sidebar:all('#pane-side').length, rows:all('#pane-side [role="row"]').length,
         selected:all('#pane-side [aria-selected="true"]').length, headers:all('#main header span[title]').length,
         editors:all('#main footer [contenteditable="true"][role="textbox"]').length,
-        messages:all('#main .message-in, #main .message-out').length}),
+        messages:all('#main [data-testid="msg-container"], #main .message-in, #main .message-out').length}),
       threadClasses: unique(all('.conv-item').map(e => e.className)),
       threadAttributeNames: unique(all('.conv-item').flatMap(e => e.getAttributeNames())),
       editorDescriptors: unique(all('[contenteditable], #richInput').map(e => [e.tagName,e.id,e.className,e.getAttribute('role'),e.getAttribute('contenteditable')].join(':'))),
