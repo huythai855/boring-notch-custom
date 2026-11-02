@@ -24,6 +24,19 @@ struct ChatMessage: Codable, Identifiable {
     var id: String
     var text: String
     var outgoing: Bool
+    var senderName: String? = nil
+    var reply: ChatReply? = nil
+    var runs: [ChatTextRun]? = nil
+}
+
+struct ChatReply: Codable {
+    var senderName: String? = nil
+    var text: String
+}
+
+struct ChatTextRun: Codable {
+    var text: String
+    var mention: Bool
 }
 
 struct ChatSnapshot: Codable {
@@ -36,6 +49,7 @@ struct ChatSnapshot: Codable {
     var canSend: Bool
     var detail: String?
     var diagnostics: [String: Int]?
+    var loadingMessages: Bool? = nil
 
     static func empty(_ service: ChatService, _ state: String = "connecting") -> Self {
         Self(service: service, state: state, title: service.rawValue, threads: [], messages: [], canSend: false)

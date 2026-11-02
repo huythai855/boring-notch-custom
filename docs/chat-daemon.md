@@ -23,7 +23,9 @@ still controls whether Boring Notch itself starts at login.
 
 Only the daemon owns WebKit, cookies, and website storage. The native notch
 client has no browser. Each service has one retained web view. Closing a
-connection window hides it, preserving the session and web view. Full daemon
+connection window moves its renderer behind the desktop, outside all screens,
+preserving a visible WebKit viewport for lazy timeline mounting without displaying
+a second chat UI. Opening Connection restores the saved on-screen frame. Full daemon
 restarts restore cookies with their original expiry from an app-local 0600 file,
 including session-only cookies that WebKit otherwise discards. The containing
 directory is 0700. Cookie properties never go over RPC or into logs. This does
@@ -41,7 +43,7 @@ Directories are mode 0700, files 0600. Discovery holds the port, a random 256-bi
 per-process bearer token, and PID. Do not publish this file or print its token.
 
 Requests: `POST /rpc`, JSON `operation`, `service`, optional `threadID`, `text`.
-Supported operations: `snapshot`, `login`, `select`, `send`, `diagnostics`. Service values:
+Supported operations: `snapshot`, `login`, `select`, `recent`, `send`, `diagnostics`. Service values:
 `Messenger`, `Zalo`, `WhatsApp`. Responses: `ok`, optional `snapshot`, `error`, `diagnostics`. Diagnostics expose bounded structural metadata, not message bodies or cookie values. Snapshots
 contain the loaded conversation list, selected thread, and loaded text messages;
 they are kept in memory, not logged. Browser Origin headers are rejected. There
@@ -79,6 +81,7 @@ npm install --prefix build/chat-tests --ignore-scripts --no-audit --no-fund jsdo
 node Tests/ChatDaemon/messages.test.cjs
 node Tests/ChatDaemon/zalo.test.cjs
 node Tests/ChatDaemon/whatsapp.test.cjs
+node Tests/ChatDaemon/rich-messages.test.cjs
 xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift \
   Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
 build/rpc-tests
@@ -99,14 +102,31 @@ The persistent website store retains IndexedDB/local storage, and the cookie
 allowlist also includes `whatsapp.com`. Neither QR payloads nor cookies are
 included in RPC diagnostics.
 
-The adapter reads visible `#pane-side` rows and `#main` message bubbles, excluding
-quoted previews, timestamps, receipts, and the search/composer drafts. Sending
-requires exactly one selected sidebar row with a unique exact name matching the
-conversation header, plus one editor in `#main footer`. Duplicate labels, missing
+The adapter reads loaded `#pane-side` rows and the active `#main` message DOM,
+including rows whose layout WebKit skips outside the viewport. It preserves the
+outer rich-text body and complete inline mentions. Quoted content is a separate
+reply model; sender headers, timestamps, receipts, and reactions are excluded from
+the body. Incoming group messages carry the actual author name and use a native
+default avatar. Supported media types have explicit placeholders when no text is
+present.
+
+Selection waits for the header and sidebar to agree and for the old conversation's
+message fingerprint to change. It then scrolls the message timeline to its end and
+waits for stable rows using native polling. Hidden connections follow the latest
+messages; an explicitly opened Connection window retains manual scrolling. The
+native latest-messages button invokes `recent`. This loads the website's current
+timeline, not a complete account-history export.
+
+Sending requires exactly one selected sidebar row with a unique normalized name
+matching the conversation header, plus one editor in `#main footer`. Duplicate
+labels get separate per-row read identities but sending stays locked. Missing
 selection, recycled rows, mismatched headers, and ambiguous send controls fail
-closed. The send control uses its semantic label or send icon, scoped to the
+closed. Read-only conversations can be read without a composer. The send control uses its semantic label or send icon, scoped to the
 footer. Commands use the same native polling and one-click acknowledgement flow
-as the other providers; no website timers or undocumented messaging APIs.
+as the other providers; no website timers or undocumented messaging APIs. A
+terminated WebContent process reloads with bounded recovery attempts and restores
+the selected conversation using the existing website store; recovery never sends
+or retries messages.
 
 The WhatsApp regression fixture covers QR login, incoming/outgoing text and emoji,
 selection transitions, duplicate labels, existing drafts, stale targets, and

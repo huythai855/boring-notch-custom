@@ -12,6 +12,9 @@ nhánh `codex/build-chat-release`.
 
 - Tab **Chat** cạnh Home/Shelf, nằm trong cùng cửa sổ và hình notch.
 - Chọn Messenger/Zalo/WhatsApp, chọn hội thoại, đọc và gửi tin nhắn văn bản.
+- WhatsApp: tên người gửi và avatar mặc định cho tin nhóm; giữ nguyên tag, tách trích dẫn khỏi nội dung trả lời.
+- Khi chọn hội thoại, tải xuống cuối timeline để đọc tin mới nhất; nút mũi tên xuống cạnh tiêu đề cho phép tải lại.
+- Tự khôi phục tiến trình web bị dừng và chọn lại hội thoại, không tự gửi lại tin nhắn.
 - Enter để gửi, Shift+Enter để xuống dòng; Enter khi IME còn đang ghép chữ dành cho IME.
 - Bản nháp riêng theo dịch vụ/hội thoại, giữ khi đổi tab hoặc thu gọn notch trong cùng lần chạy app.
 - Chat cao mặc định **380 pt**; chuyển Home ↔ Chat animate **0,24 giây**, giữ khung cửa sổ ổn định.
@@ -36,8 +39,10 @@ Với **WhatsApp**, mở WhatsApp trên điện thoại → **Thiết bị liên
 → **Liên kết thiết bị**, rồi quét mã QR trong cửa sổ Kết nối. Phiên WhatsApp Web
 được WebKit giữ riêng trong daemon, không dùng lại phiên của ứng dụng WhatsApp desktop.
 Adapter chỉ mở gửi khi xác định được một hàng đang chọn trong sidebar và tiêu đề
-hội thoại khớp chính xác. Hội thoại trùng tên hoặc đã cuộn khỏi sidebar có thể cần
-mở cửa sổ Kết nối để xử lý; app sẽ khóa gửi khi không xác định chắc chắn người nhận.
+hội thoại khớp chính xác. Hội thoại trùng tên vẫn có thể chọn để đọc, nhưng khóa gửi.
+Hội thoại đã cuộn khỏi sidebar có thể cần mở cửa sổ Kết nối để xử lý; app sẽ khóa gửi
+khi không xác định chắc chắn người nhận. Ảnh, video, nhãn dán và tệp chưa xem trực tiếp
+trong notch sẽ có nhãn nội dung thay vì bị bỏ qua; mở Kết nối để xem bản đầy đủ.
 
 Phiên được giữ bằng website storage và cookie local, nhưng dịch vụ vẫn có thể hết hạn
 hoặc thu hồi phiên. Bản nháp native hiện **không lưu qua việc thoát/restart app**.
@@ -130,6 +135,7 @@ node Tests/ChatDaemon/bridge.test.cjs
 node Tests/ChatDaemon/messages.test.cjs
 node Tests/ChatDaemon/zalo.test.cjs
 node Tests/ChatDaemon/whatsapp.test.cjs
+node Tests/ChatDaemon/rich-messages.test.cjs
 xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift \
   Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
 build/rpc-tests

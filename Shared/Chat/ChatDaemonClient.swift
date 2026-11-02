@@ -96,10 +96,27 @@ final class ChatDaemonClient: ObservableObject {
         hasActionError = false
         error = nil
         generation += 1
+        snapshot = ChatSnapshot(service: service, state: "ready", title: thread.name,
+            threads: snapshot.threads, messages: [], activeID: thread.id, canSend: false, loadingMessages: true)
         defer { selecting = false }
         do {
             let result = try await call(.init(operation: "select", service: service, threadID: thread.id))
-            if let value = result.snapshot { snapshot = value }
+            if let value = result.snapshot, value.activeID == thread.id { snapshot = value }
+            else { throw NSError(domain: "NotchChat", code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Hội thoại đã thay đổi trong lúc tải. Hãy chọn lại."]) }
+            error = nil
+        } catch { hasActionError = true; self.error = error.localizedDescription }
+    }
+
+    func refreshRecent() async {
+        guard !sending, !selecting, let id = snapshot.activeID else { return }
+        selecting = true
+        generation += 1
+        hasActionError = false
+        defer { selecting = false }
+        do {
+            let result = try await call(.init(operation: "recent", service: service, threadID: id))
+            if let value = result.snapshot, value.activeID == id { snapshot = value }
             error = nil
         } catch { hasActionError = true; self.error = error.localizedDescription }
     }

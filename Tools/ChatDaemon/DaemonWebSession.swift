@@ -8,6 +8,16 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
     private let window: NSWindow
     private var busy = false
     private var failure: String?
+    private var needsReload = false
+    private var recoveryAttempt = 0
+    private var nextRecovery = Date.distantPast
+    private var recoveryInFlight = false
+    private var reloadStarted = Date.distantPast
+    private var connectionPresented = false
+    private var connectionFrame: NSRect?
+    private var selectedThread: String?
+    private var restoreSelection = false
+    private var restoreAttempts = 0
     private static let world = WKContentWorld.world(name: "NotchChatBridge")
     private static let bridge: String = {
         guard let url = Bundle.main.url(forResource: "ChatBridge", withExtension: "js"),
@@ -38,8 +48,10 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
         window.contentView = webView
         window.delegate = self
         window.center()
+        connectionFrame = window.frame
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        keepRendererAlive()
         Task { @MainActor [weak self] in
             guard let self else { return }
             await SessionCookies.shared.prepare(self.webView.configuration.websiteDataStore.httpCookieStore)
@@ -48,22 +60,61 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
     }
 
     func showWindow() {
+        recoverIfNeeded(force: true)
+        connectionPresented = true
+        if let frame = connectionFrame, NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }) {
+            window.setFrame(frame, display: false)
+        }
+        else { window.center() }
+        window.collectionBehavior.remove(.ignoresCycle)
+        window.isExcludedFromWindowsMenu = false
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        sender.orderOut(nil)
+        connectionFrame = sender.frame
+        connectionPresented = false
+        keepRendererAlive()
         return false
+    }
+
+    private func keepRendererAlive() {
+        // WhatsApp lazily mounts its timeline only in a visible WebView. Keep
+        // its normal-size renderer ordered behind the desktop, outside every
+        // screen, so closing Connection does not freeze or unmount history.
+        let left = NSScreen.screens.map { $0.frame.minX }.min() ?? 0
+        let bottom = NSScreen.screens.map { $0.frame.minY }.min() ?? 0
+        window.setFrameOrigin(NSPoint(x: left - window.frame.width - 1000,
+                                     y: bottom - window.frame.height - 1000))
+        window.collectionBehavior.insert(.ignoresCycle)
+        window.isExcludedFromWindowsMenu = true
+        window.orderBack(nil)
     }
 
     func snapshot() async -> ChatSnapshot {
         guard !busy else { return .empty(service, "busy") }
+        if needsReload {
+            recoverIfNeeded()
+            var result = ChatSnapshot.empty(service, "connecting")
+            result.detail = "Đang khôi phục phiên web để tải tin mới…"
+            return result
+        }
         do {
-            let value = try await webView.callAsyncJavaScript(Self.bridge + "\nreturn JSON.stringify(bridge.snapshot(service));",
-                arguments: ["service": service.rawValue], in: nil, contentWorld: Self.world)
+            let value = try await webView.callAsyncJavaScript(Self.bridge + "\nreturn JSON.stringify(bridge.snapshot(service, followRecent));",
+                arguments: ["service": service.rawValue, "followRecent": !connectionPresented], in: nil, contentWorld: Self.world)
             guard let json = value as? String else { return .empty(service) }
             var snapshot = try JSONDecoder().decode(ChatSnapshot.self, from: Data(json.utf8))
+            if restoreSelection, snapshot.state == "ready", snapshot.activeID == nil,
+               restoreAttempts < 3, let thread = selectedThread {
+                restoreAttempts += 1
+                Task { @MainActor [weak self] in
+                    guard let self, !self.busy, self.restoreSelection else { return }
+                    try? await self.perform(.init(operation: "select", service: self.service, threadID: thread))
+                }
+            } else if snapshot.activeID != nil {
+                restoreSelection = false
+            }
             if let failure { snapshot.detail = failure }
             return snapshot
         } catch {
@@ -98,6 +149,11 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
                 try await Task.sleep(for: .milliseconds(80))
             }
             guard selected else { throw problem("Chưa xác nhận được hội thoại mới. Không gửi tin.") }
+            selectedThread = thread
+            restoreSelection = false
+            try await readRecent(thread)
+        case "recent":
+            try await readRecent(thread)
         case "send":
             guard let text = request.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   text.count <= 16_000 else { throw problem("Tin nhắn rỗng hoặc quá dài.") }
@@ -127,15 +183,56 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
         }
     }
 
+    private func readRecent(_ thread: String) async throws {
+        _ = try await webView.callAsyncJavaScript(Self.bridge + "\nreturn bridge.beginRecent(thread);",
+            arguments: ["thread": thread], in: nil, contentWorld: Self.world)
+        let deadline = Date().addingTimeInterval(1.8)
+        while Date() < deadline {
+            try await Task.sleep(for: .milliseconds(100))
+            let ready = try await webView.callAsyncJavaScript(Self.bridge + "\nreturn bridge.recentStep(thread);",
+                arguments: ["thread": thread], in: nil, contentWorld: Self.world)
+            if ready as? Bool == true { break }
+        }
+    }
+
     private func problem(_ message: String) -> NSError {
         NSError(domain: "ChatDaemon", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { failure = nil }
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if (error as NSError).code != NSURLErrorCancelled { failure = error.localizedDescription }
+    private func recoverIfNeeded(force: Bool = false) {
+        guard needsReload, !busy, force || Date() >= nextRecovery else { return }
+        guard !recoveryInFlight || Date().timeIntervalSince(reloadStarted) > 30 else { return }
+        recoveryAttempt += 1
+        recoveryInFlight = true
+        reloadStarted = Date()
+        nextRecovery = Date().addingTimeInterval(min(30, pow(2, Double(min(recoveryAttempt, 5)))))
+        // Keep the existing website store and cookies. Reloading restores a
+        // terminated WebContent process; it never retries a chat send.
+        if webView.url != nil { webView.reload() }
+        else { webView.load(URLRequest(url: service.url)) }
     }
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { failure = "Phiên web bị dừng. Mở Kết nối để tải lại." }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        failure = nil
+        needsReload = false
+        recoveryInFlight = false
+        recoveryAttempt = 0
+    }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        if (error as NSError).code != NSURLErrorCancelled {
+            failure = error.localizedDescription
+            needsReload = true
+            recoveryInFlight = false
+        }
+    }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        failure = "Phiên web bị dừng; đang khôi phục."
+        needsReload = true
+        recoveryInFlight = false
+        restoreSelection = selectedThread != nil
+        restoreAttempts = 0
+        recoverIfNeeded()
+    }
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         decisionHandler(["https", "http", "about", "blob"].contains(action.request.url?.scheme ?? "") ? .allow : .cancel)

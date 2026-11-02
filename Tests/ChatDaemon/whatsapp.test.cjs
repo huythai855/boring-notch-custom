@@ -56,7 +56,10 @@ function fixture({login=false, duplicate=false, selected=true, buttonCount=1, mo
   const select = (row, updateHeader=true) => {
     for (const e of document.querySelectorAll('#pane-side [aria-selected]')) e.setAttribute('aria-selected','false');
     (row.querySelector('[aria-selected]') || row).setAttribute('aria-selected','true');
-    if (updateHeader) document.querySelector('#main header span').setAttribute('title', row.querySelector('[title]').title);
+    if (updateHeader) {
+      document.querySelector('#main header span').setAttribute('title', row.querySelector('[title]').title);
+      for (const msg of document.querySelectorAll('#main [data-id]')) msg.setAttribute('data-id', row.id+'-'+msg.getAttribute('data-id'));
+    }
   };
   for (const row of document.querySelectorAll('#pane-side [role="row"]')) {
     const target = modern ? row.querySelector('span[title]').closest('[role="gridcell"]') : row;
@@ -125,7 +128,8 @@ function fixture({login=false, duplicate=false, selected=true, buttonCount=1, mo
   f.document.querySelector('#bob span').title = 'Recycled virtual row';
   assert.equal(f.snapshot().canSend,false);
   f = fixture({duplicate:true});
-  assert.equal(f.snapshot().threads.length,0,'Duplicate labels must not alias another contact');
+  assert.equal(f.snapshot().threads.length,2,'Duplicate labels remain readable');
+  assert.notEqual(f.snapshot().threads[0].id,f.snapshot().threads[1].id,'Duplicate labels must not alias another contact');
   assert.equal(f.snapshot().canSend,false);
   f = fixture({selected:false});
   assert.equal(f.snapshot().canSend,false,'A matching header alone is not enough');

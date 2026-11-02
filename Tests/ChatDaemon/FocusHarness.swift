@@ -8,7 +8,16 @@ import SwiftUI
 final class ChatDaemonClient: ObservableObject {
     static let shared = ChatDaemonClient()
     @Published var snapshot = ChatSnapshot(service: .messenger, state: "ready", title: "Kiểm tra bàn phím cục bộ",
-        threads: [], messages: [.init(id: "fixture", text: "Cửa sổ kiểm tra nhập liệu. Không kết nối tài khoản hoặc gửi tin.", outgoing: false)],
+        threads: [], messages: [
+            .init(id: "fixture", text: "Cửa sổ kiểm tra nhập liệu. Không kết nối tài khoản hoặc gửi tin.", outgoing: false),
+            .init(id: "group-mention", text: "Chúc @Anh Tuấn sinh nhật vui vẻ 🎉", outgoing: false,
+                  senderName: "Anh Huy", runs: [
+                    .init(text: "Chúc ", mention: false), .init(text: "@Anh Tuấn", mention: true),
+                    .init(text: " sinh nhật vui vẻ 🎉", mention: false)
+                  ]),
+            .init(id: "group-reply", text: "Đồng ý, cảm ơn!", outgoing: false,
+                  senderName: "Chị Lan", reply: .init(senderName: "Anh Huy", text: "Chúc @Anh Tuấn sinh nhật vui vẻ 🎉"))
+        ],
         activeID: "local-test", canSend: true)
     @Published var service = ChatService.messenger
     @Published var error: String?
@@ -24,6 +33,7 @@ final class ChatDaemonClient: ObservableObject {
     }
     func choose(_ service: ChatService) { self.service = service }
     func select(_ thread: ChatThread) async {}
+    func refreshRecent() async {}
     private var sendCount = 0
     func send(_ text: String, expectedID: String) async -> Bool {
         guard !sending else { return false }

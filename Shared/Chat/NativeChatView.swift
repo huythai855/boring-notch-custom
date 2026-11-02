@@ -71,26 +71,23 @@ struct ChatWorkspace: View {
                     Text(client.snapshot.title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
                     Spacer()
                     if client.selecting || client.sending { ProgressView().controlSize(.mini) }
+                    Button { Task { await client.refreshRecent() } } label: {
+                        Image(systemName: "arrow.down.to.line")
+                    }
+                    .buttonStyle(.plain)
+                    .help("Tải tin nhắn mới nhất")
+                    .disabled(client.snapshot.activeID == nil || client.selecting || client.sending)
                 }
                 .padding(.horizontal, 16).padding(.top, 10)
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 8) {
                             if client.snapshot.messages.isEmpty {
-                                Text(client.snapshot.activeID == nil ? "Chọn một cuộc trò chuyện ở trên." : "Chưa đọc được nội dung tin nhắn từ trang web.")
+                                Text(client.snapshot.loadingMessages == true ? "Đang tải tin nhắn mới nhất…" : client.snapshot.activeID == nil ? "Chọn một cuộc trò chuyện ở trên." : "Chưa có tin nhắn văn bản được tải từ trang web.")
                                     .font(.caption).foregroundStyle(.secondary).padding(.vertical, 20)
                             }
                             ForEach(client.snapshot.messages) { message in
-                                HStack {
-                                    if message.outgoing { Spacer(minLength: 45) }
-                                    Text(message.text)
-                                        .font(.system(size: 13))
-                                        .textSelection(.enabled)
-                                        .padding(.horizontal, 12).padding(.vertical, 8)
-                                        .background(message.outgoing ? Color.accentColor : Color.white.opacity(0.12),
-                                                    in: RoundedRectangle(cornerRadius: 15))
-                                    if !message.outgoing { Spacer(minLength: 45) }
-                                }
+                                ChatMessageBubble(message: message)
                                 .id(message.id)
                             }
                             Color.clear.frame(height: 1).id("bottom")
@@ -170,6 +167,72 @@ struct ChatWorkspace: View {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         Task {
             if await client.send(text, expectedID: id), client.drafts[key] == text { client.drafts[key] = "" }
+        }
+    }
+}
+
+private struct ChatMessageBubble: View {
+    let message: ChatMessage
+
+    private var sender: String? {
+        guard !message.outgoing, let name = message.senderName, !name.isEmpty else { return nil }
+        return name
+    }
+
+    private var senderColor: Color {
+        let colors: [Color] = [.pink, .mint, .cyan, .orange, .purple]
+        let value = (message.senderName ?? "").utf8.reduce(UInt32(2166136261)) { ($0 ^ UInt32($1)) &* 16777619 }
+        return colors[Int(value % UInt32(colors.count))]
+    }
+
+    private var bodyText: Text {
+        guard let runs = message.runs, runs.map(\.text).joined() == message.text else { return Text(message.text) }
+        return runs.reduce(Text("")) { result, run in
+            result + (run.mention
+                ? Text(run.text).foregroundColor(message.outgoing ? .white : .mint).fontWeight(.semibold)
+                : Text(run.text))
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 7) {
+            if message.outgoing { Spacer(minLength: 45) }
+            if let sender {
+                Text(String(sender.prefix(1)).uppercased())
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(senderColor)
+                    .frame(width: 26, height: 26)
+                    .background(senderColor.opacity(0.18), in: Circle())
+                    .accessibilityLabel("Avatar mặc định của \(sender)")
+            }
+            VStack(alignment: .leading, spacing: 5) {
+                if let sender {
+                    Text(sender)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(senderColor)
+                        .lineLimit(1)
+                }
+                if let reply = message.reply {
+                    HStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 1).fill(senderColor).frame(width: 2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let name = reply.senderName, !name.isEmpty {
+                                Text(name).font(.system(size: 10, weight: .semibold)).foregroundStyle(senderColor)
+                            }
+                            Text(reply.text).font(.system(size: 11)).lineLimit(3)
+                        }
+                        .padding(.vertical, 5)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 7)
+                    .background(.black.opacity(0.12), in: RoundedRectangle(cornerRadius: 7))
+                }
+                bodyText.font(.system(size: 13)).textSelection(.enabled)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(message.outgoing ? Color.accentColor : Color.white.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 15))
+            if !message.outgoing { Spacer(minLength: 45) }
         }
     }
 }

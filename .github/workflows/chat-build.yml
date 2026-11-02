@@ -32,6 +32,7 @@ jobs:
           node Tests/ChatDaemon/messages.test.cjs
           node Tests/ChatDaemon/zalo.test.cjs
           node Tests/ChatDaemon/whatsapp.test.cjs
+          node Tests/ChatDaemon/rich-messages.test.cjs
           xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
           build/rpc-tests
       - name: Build and package Release

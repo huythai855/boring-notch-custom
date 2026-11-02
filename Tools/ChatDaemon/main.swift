@@ -106,7 +106,7 @@ final class DaemonDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handle(_ request: ChatRPCRequest) async throws -> ChatRPCResponse {
-        guard ["snapshot", "login", "select", "send", "diagnostics"].contains(request.operation) else {
+        guard ["snapshot", "login", "select", "recent", "send", "diagnostics"].contains(request.operation) else {
             return .init(ok: false, error: "Unknown operation")
         }
         let session: DaemonWebSession
@@ -119,7 +119,7 @@ final class DaemonDelegate: NSObject, NSApplicationDelegate {
         if request.operation == "diagnostics" {
             return .init(ok: true, diagnostics: try await session.diagnostics())
         }
-        if request.operation == "select" || request.operation == "send" {
+        if request.operation == "select" || request.operation == "recent" || request.operation == "send" {
             try await session.perform(request)
         }
         return .init(ok: true, snapshot: await session.snapshot())
