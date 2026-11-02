@@ -9,6 +9,7 @@ final class ChatDaemonClient: ObservableObject {
     @Published var drafts: [String: String] = [:]
     @Published var sending = false
     @Published var selecting = false
+    @Published var scrollRequest = 0
     @Published var service: ChatService = .messenger
     private var polling: Task<Void, Never>?
     private var generation = 0
@@ -101,7 +102,10 @@ final class ChatDaemonClient: ObservableObject {
         defer { selecting = false }
         do {
             let result = try await call(.init(operation: "select", service: service, threadID: thread.id))
-            if let value = result.snapshot, value.activeID == thread.id { snapshot = value }
+            if let value = result.snapshot, value.activeID == thread.id {
+                snapshot = value
+                scrollRequest += 1
+            }
             else { throw NSError(domain: "NotchChat", code: 2,
                 userInfo: [NSLocalizedDescriptionKey: "Hội thoại đã thay đổi trong lúc tải. Hãy chọn lại."]) }
             error = nil
@@ -116,7 +120,10 @@ final class ChatDaemonClient: ObservableObject {
         defer { selecting = false }
         do {
             let result = try await call(.init(operation: "recent", service: service, threadID: id))
-            if let value = result.snapshot, value.activeID == id { snapshot = value }
+            if let value = result.snapshot, value.activeID == id {
+                snapshot = value
+                scrollRequest += 1
+            }
             error = nil
         } catch { hasActionError = true; self.error = error.localizedDescription }
     }

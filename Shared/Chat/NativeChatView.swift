@@ -95,8 +95,15 @@ struct ChatWorkspace: View {
                         .padding(14)
                     }
                     .defaultScrollAnchor(.bottom)
-                    .onChange(of: client.snapshot.messages.last?.id) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
-                    .onChange(of: client.snapshot.activeID) { _, _ in proxy.scrollTo("bottom", anchor: .bottom) }
+                    .task(id: ChatScrollRequest(thread: client.snapshot.activeID,
+                        lastMessage: client.snapshot.messages.last?.id, revision: client.scrollRequest)) {
+                        // Wait for LazyVStack and reply previews to finish their
+                        // first layout; scrolling during snapshot assignment can
+                        // otherwise leave the newest bubble below the composer.
+                        try? await Task.sleep(for: .milliseconds(70))
+                        guard !Task.isCancelled else { return }
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
                 }
             }
 
@@ -169,6 +176,12 @@ struct ChatWorkspace: View {
             if await client.send(text, expectedID: id), client.drafts[key] == text { client.drafts[key] = "" }
         }
     }
+}
+
+private struct ChatScrollRequest: Hashable {
+    let thread: String?
+    let lastMessage: String?
+    let revision: Int
 }
 
 private struct ChatMessageBubble: View {

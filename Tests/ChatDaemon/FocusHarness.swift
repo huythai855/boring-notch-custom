@@ -22,6 +22,7 @@ final class ChatDaemonClient: ObservableObject {
     @Published var service = ChatService.messenger
     @Published var error: String?
     @Published var selecting = false
+    @Published var scrollRequest = 0
     @Published var drafts: [String: String] = [:]
     @Published var sending = false
     private var timer: Timer?
