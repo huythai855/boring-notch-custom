@@ -2,9 +2,15 @@ import Foundation
 import Darwin
 
 enum ChatService: String, CaseIterable, Codable, Identifiable {
-    case messenger = "Messenger", zalo = "Zalo"
+    case messenger = "Messenger", zalo = "Zalo", whatsapp = "WhatsApp"
     var id: String { rawValue }
-    var url: URL { URL(string: self == .messenger ? "https://www.messenger.com/" : "https://chat.zalo.me/")! }
+    var url: URL {
+        switch self {
+        case .messenger: URL(string: "https://www.messenger.com/")!
+        case .zalo: URL(string: "https://chat.zalo.me/")!
+        case .whatsapp: URL(string: "https://web.whatsapp.com/")!
+        }
+    }
 }
 
 struct ChatThread: Codable, Identifiable {

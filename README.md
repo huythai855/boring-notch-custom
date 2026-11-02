@@ -1,6 +1,6 @@
 # Boring Notch Chat — bản fork cá nhân
 
-Chat nhanh Messenger và Zalo **ngay trong notch**, dùng giao diện SwiftUI native.
+Chat nhanh Messenger, Zalo và WhatsApp **ngay trong notch**, dùng giao diện SwiftUI native.
 Bản fork dựa trên [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch).
 Thông tin và credits của dự án gốc giữ tại [README.upstream.md](README.upstream.md); giấy phép giữ nguyên trong [LICENSE](LICENSE).
 
@@ -11,7 +11,7 @@ nhánh `codex/build-chat-release`.
 ## Hiện đã có
 
 - Tab **Chat** cạnh Home/Shelf, nằm trong cùng cửa sổ và hình notch.
-- Chọn Messenger/Zalo, chọn hội thoại, đọc và gửi tin nhắn văn bản.
+- Chọn Messenger/Zalo/WhatsApp, chọn hội thoại, đọc và gửi tin nhắn văn bản.
 - Enter để gửi, Shift+Enter để xuống dòng; Enter khi IME còn đang ghép chữ dành cho IME.
 - Bản nháp riêng theo dịch vụ/hội thoại, giữ khi đổi tab hoặc thu gọn notch trong cùng lần chạy app.
 - Chat cao mặc định **380 pt**; chuyển Home ↔ Chat animate **0,24 giây**, giữ khung cửa sổ ổn định.
@@ -19,18 +19,25 @@ nhánh `codex/build-chat-release`.
 - Bấm **Kết nối** mới mở cửa sổ web để đăng nhập/kích hoạt lại phiên.
 
 Đây là bản thử nghiệm dùng cá nhân. Adapter đọc và thao tác DOM của website gốc,
-không gọi Business API, không sửa CSS/giao diện Messenger hoặc Zalo. Website thay đổi
+không gọi Business API, không sửa CSS/giao diện website. Website thay đổi
 cấu trúc có thể làm adapter ngừng hoạt động.
 
 ## Cách sử dụng
 
 1. Mở **Boring Notch Chat.app**. Chỉ chạy một bản notch tại một thời điểm.
 2. Đưa chuột lên notch, chọn biểu tượng **Chat** (hai bong bóng).
-3. Chọn **Messenger** hoặc **Zalo**, bấm **Kết nối** nếu chưa đăng nhập.
+3. Chọn **Messenger**, **Zalo** hoặc **WhatsApp**, bấm **Kết nối** nếu chưa đăng nhập.
 4. Đăng nhập trực tiếp trong cửa sổ của dịch vụ; nhập mật khẩu/OTP tại đó.
 5. Đóng cửa sổ kết nối sau khi đăng nhập: thao tác này chỉ ẩn WebView, không đăng xuất.
 6. Chọn hội thoại trên hàng avatar, nhập nội dung rồi bấm gửi hoặc Enter.
 7. Escape để thu gọn; Home/Shelf để trở về chức năng khác. Chat giữ mở khi đang nhận focus bàn phím.
+
+Với **WhatsApp**, mở WhatsApp trên điện thoại → **Thiết bị liên kết / Linked devices**
+→ **Liên kết thiết bị**, rồi quét mã QR trong cửa sổ Kết nối. Phiên WhatsApp Web
+được WebKit giữ riêng trong daemon, không dùng lại phiên của ứng dụng WhatsApp desktop.
+Adapter chỉ mở gửi khi xác định được một hàng đang chọn trong sidebar và tiêu đề
+hội thoại khớp chính xác. Hội thoại trùng tên hoặc đã cuộn khỏi sidebar có thể cần
+mở cửa sổ Kết nối để xử lý; app sẽ khóa gửi khi không xác định chắc chắn người nhận.
 
 Phiên được giữ bằng website storage và cookie local, nhưng dịch vụ vẫn có thể hết hạn
 hoặc thu hồi phiên. Bản nháp native hiện **không lưu qua việc thoát/restart app**.
@@ -122,6 +129,7 @@ npm install --prefix build/chat-tests --ignore-scripts --no-audit --no-fund jsdo
 node Tests/ChatDaemon/bridge.test.cjs
 node Tests/ChatDaemon/messages.test.cjs
 node Tests/ChatDaemon/zalo.test.cjs
+node Tests/ChatDaemon/whatsapp.test.cjs
 xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift \
   Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
 build/rpc-tests
@@ -159,7 +167,7 @@ Tab Chat / SwiftUI → ChatDaemonClient → HTTP RPC local có token
                                Notch Chat Daemon
                                          ↓
                          WKWebView + DOM adapter riêng
-                                  Messenger / Zalo
+                             Messenger / Zalo / WhatsApp
 ```
 
 | Thành phần | File |

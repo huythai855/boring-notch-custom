@@ -31,7 +31,7 @@ struct DynamicNotchApp: App {
 
     var body: some Scene {
         MenuBarExtra("boring.notch", systemImage: "sparkle", isInserted: $showMenuBarIcon) {
-            Button("Open Chat — Messenger / Zalo") {
+            Button("Open Chat — Messenger / Zalo / WhatsApp") {
                 ChatPanelController.shared.show()
             }
             Divider()

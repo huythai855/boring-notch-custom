@@ -53,7 +53,7 @@ final class SessionCookies: NSObject, WKHTTPCookieStoreObserver {
 
     private func allowed(_ cookie: HTTPCookie) -> Bool {
         let domain = cookie.domain.trimmingCharacters(in: CharacterSet(charactersIn: "."))
-        return ["messenger.com", "facebook.com", "zalo.me", "zaloapp.com", "zdn.vn"].contains {
+        return ["messenger.com", "facebook.com", "zalo.me", "zaloapp.com", "zdn.vn", "whatsapp.com"].contains {
             domain == $0 || domain.hasSuffix("." + $0)
         }
     }

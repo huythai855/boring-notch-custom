@@ -27,7 +27,8 @@ Boring Notch Chat — Apple Silicon (arm64), macOS 14+
 Quit any running Boring Notch before opening this fork.
 Drag Boring Notch Chat.app to Applications, then open it.
 For updates that change the chat helper, also quit Notch Chat Daemon first.
-Connect Messenger/Zalo from the Chat tab and log in directly in its window.
+Connect Messenger/Zalo/WhatsApp from the Chat tab and log in directly in its window.
+For WhatsApp, scan the QR code using Linked devices on your phone.
 
 This personal build is ad-hoc signed, without Apple notarization.
 If macOS blocks this trusted download, use System Settings > Privacy & Security

@@ -1,7 +1,7 @@
 # Local chat daemon architecture
 
 ```text
-Messenger / Zalo web (unmodified)
+Messenger / Zalo / WhatsApp web (unmodified)
           ↕ DOM adapter in an isolated WKContentWorld
 Notch Chat Daemon.app (separate process, owns persistent WKWebViews)
           ↕ authenticated loopback RPC
@@ -42,7 +42,7 @@ per-process bearer token, and PID. Do not publish this file or print its token.
 
 Requests: `POST /rpc`, JSON `operation`, `service`, optional `threadID`, `text`.
 Supported operations: `snapshot`, `login`, `select`, `send`, `diagnostics`. Service values:
-`Messenger`, `Zalo`. Responses: `ok`, optional `snapshot`, `error`, `diagnostics`. Diagnostics expose bounded structural metadata, not message bodies or cookie values. Snapshots
+`Messenger`, `Zalo`, `WhatsApp`. Responses: `ok`, optional `snapshot`, `error`, `diagnostics`. Diagnostics expose bounded structural metadata, not message bodies or cookie values. Snapshots
 contain the loaded conversation list, selected thread, and loaded text messages;
 they are kept in memory, not logged. Browser Origin headers are rejected. There
 is no CORS allowance, arbitrary JavaScript execution endpoint, private messaging
@@ -78,6 +78,7 @@ node Tests/ChatDaemon/bridge.test.cjs
 npm install --prefix build/chat-tests --ignore-scripts --no-audit --no-fund jsdom@26.1.0
 node Tests/ChatDaemon/messages.test.cjs
 node Tests/ChatDaemon/zalo.test.cjs
+node Tests/ChatDaemon/whatsapp.test.cjs
 xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift \
   Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
 build/rpc-tests
@@ -87,6 +88,29 @@ The build script builds and ad-hoc signs the daemon before Xcode embeds it as an
 app resource. Old WebView-host build is backed up at
 `build/Backups/Boring Notch Chat WebView.app`. The upstream original remains at
 `/Applications/boringNotch.app`.
+
+## WhatsApp adapter
+
+WhatsApp opens `https://web.whatsapp.com/` in its retained WebKit view. Link it
+from the phone's Linked devices screen; desktop-app credentials are not imported.
+The persistent website store retains IndexedDB/local storage, and the cookie
+allowlist also includes `whatsapp.com`. Neither QR payloads nor cookies are
+included in RPC diagnostics.
+
+The adapter reads visible `#pane-side` rows and `#main` message bubbles, excluding
+quoted previews, timestamps, receipts, and the search/composer drafts. Sending
+requires exactly one selected sidebar row with a unique exact name matching the
+conversation header, plus one editor in `#main footer`. Duplicate labels, missing
+selection, recycled rows, mismatched headers, and ambiguous send controls fail
+closed. The send control uses its semantic label or send icon, scoped to the
+footer. Commands use the same native polling and one-click acknowledgement flow
+as the other providers; no website timers or undocumented messaging APIs.
+
+The WhatsApp regression fixture covers QR login, incoming/outgoing text and emoji,
+selection transitions, duplicate labels, existing drafts, stale targets, and
+ambiguous sends. Fixture coverage does not replace authenticated live validation
+against the current WhatsApp markup; sending a real message needs a separate user
+instruction identifying the conversation and message.
 
 ## Authenticated validation (Messenger)
 

@@ -7,12 +7,85 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
   const text = e => (e?.innerText || e?.textContent || '').trim();
   const hash = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0).toString(16); };
   const messenger = () => ['messenger.com', 'www.messenger.com'].includes(location.hostname);
-  const allowed = () => messenger() || location.hostname === 'chat.zalo.me';
+  const whatsapp = () => location.hostname === 'web.whatsapp.com';
+  const allowed = () => messenger() || location.hostname === 'chat.zalo.me' || whatsapp();
   let targets = new Map();
   const threadPath = href => href?.match(/\/(?:e2ee\/)?t\/([^/?#]+)/)?.[1];
-  const composer = () => messenger()
-    ? first('[contenteditable="true"][role="textbox"]')
-    : first('#richInput, #input_line_0[contenteditable="true"], #chat-input-content-id[contenteditable="true"], .chat-input [contenteditable="true"]');
+  const composer = () => {
+    if (whatsapp()) {
+      const inputs = all('#main footer [contenteditable="true"][role="textbox"]');
+      return inputs.length === 1 ? inputs[0] : null;
+    }
+    return messenger() ? first('[contenteditable="true"][role="textbox"]')
+      : first('#richInput, #input_line_0[contenteditable="true"], #chat-input-content-id[contenteditable="true"], .chat-input [contenteditable="true"]');
+  };
+  function whatsappEntries() {
+    const rows = all('#pane-side [role="row"]');
+    const candidates = (rows.length ? rows : all('#pane-side [role="listitem"]')).map(row => {
+      const label = first('span[title][dir="auto"]', row) || first('span[title]', row);
+      const name = (label?.getAttribute('title') || text(label)).trim();
+      return {row, name, id: 'wa-name:' + encodeURIComponent(name)};
+    }).filter(e => e.name);
+    // WhatsApp's virtualized sidebar does not always expose a contact JID.
+    // Require a unique exact label and a matching main header; duplicate names
+    // are ambiguous and must never unlock sending to the wrong person.
+    const counts = new Map();
+    for (const e of candidates) counts.set(e.name, (counts.get(e.name) || 0) + 1);
+    return candidates.filter(e => counts.get(e.name) === 1);
+  }
+  function whatsappHeader() {
+    const label = first('#main header [data-testid="conversation-info-header-chat-title"]') ||
+      first('#main header span[title][dir="auto"]') || first('#main header span[title]');
+    return (label?.getAttribute('title') || text(label)).trim();
+  }
+  function whatsappActiveID() {
+    const selected = whatsappEntries().filter(({row}) =>
+      row.matches('[aria-selected="true"], [data-selected="true"]') ||
+      !!row.querySelector('[aria-selected="true"], [data-selected="true"]') ||
+      !!row.closest('#pane-side [aria-selected="true"]'));
+    return selected.length === 1 && selected[0].name === whatsappHeader() ? selected[0].id : null;
+  }
+  function whatsappThreads() {
+    targets = new Map();
+    return whatsappEntries().slice(0, 40).map(({row, name, id}) => {
+      targets.set(id, row);
+      const lines = text(row).split('\n').map(s => s.trim()).filter(Boolean);
+      const avatar = row.querySelector('img')?.src;
+      return {id, name: name.slice(0, 150), preview: lines.filter(s => s !== name).slice(0, 2).join(' · ').slice(0, 250),
+        avatar: avatar?.startsWith('https://') ? avatar : null};
+    });
+  }
+  function whatsappText(element) {
+    const read = node => {
+      if (node.nodeType === 3) return node.nodeValue || '';
+      if (node.nodeName === 'BR') return '\n';
+      if (node.nodeName === 'IMG') return node.getAttribute('alt') || '';
+      const value = Array.from(node.childNodes).map(read).join('');
+      return ['DIV', 'P'].includes(node.nodeName) ? value + '\n' : value;
+    };
+    return read(element).trim();
+  }
+  function whatsappMessages() {
+    const bodySelector = '[data-testid="msg-text"], .selectable-text.copyable-text';
+    const quoteSelector = '[data-testid="quoted-message"], [data-testid="quoted-message-text"], [data-testid="quoted-msg"], [data-testid="quoted-text"], [aria-label="Quoted message"], [aria-label="Tin nhắn được trích dẫn"]';
+    return all('#main .message-in, #main .message-out').slice(-50).flatMap((row, index) => {
+      const nodes = all(bodySelector, row).filter(e => !e.querySelector(bodySelector) && !e.closest(quoteSelector));
+      const content = nodes.map(whatsappText).filter(Boolean).join('\n');
+      if (!content) return [];
+      return [{id: row.getAttribute('data-id') || row.querySelector('[data-id]')?.getAttribute('data-id') || row.id || hash(content + index),
+        text: content.slice(0, 8000), outgoing: row.classList.contains('message-out')}];
+    });
+  }
+  function whatsappSendButton(input) {
+    const footer = input.closest('#main footer');
+    if (!footer) return null;
+    const candidates = all('button, [role="button"]', footer).filter(e => {
+      const label = (e.getAttribute('aria-label') || e.getAttribute('title') || '').trim();
+      return (/^(send( message)?|gửi( tin nhắn)?)$/i.test(label) || e.querySelector('[data-icon="send"], [data-testid="send"]')) &&
+        !e.contains(input) && e.getAttribute('aria-disabled') !== 'true' && !e.disabled;
+    });
+    return candidates.length === 1 ? candidates[0] : null;
+  }
   const zaloInactive = () => location.hostname === 'chat.zalo.me' && !all('.conv-item').length &&
     (document.body?.innerText || document.body?.textContent || '').includes('Nhấn kích hoạt để sử dụng trên Tab này');
   function zaloClick(element) {
@@ -29,6 +102,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     element.dispatchEvent(new view.MouseEvent('click', {...options,buttons:0,detail:1}));
   }
   function activeID() {
+    if (whatsapp()) return whatsappActiveID();
     if (messenger()) return threadPath(location.pathname) || null;
     const selected = first('.conv-item.selected, .conv-item.active, .conv-item.is-selected, [data-id].conv-item--selected');
     return selected ? zaloID(selected) : null;
@@ -38,6 +112,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
       'z-' + hash(text(first('.conv-item-title__name, .conv-item-title, .conv-item__name', e)) || text(e).split('\n')[0]);
   }
   function threads() {
+    if (whatsapp()) return whatsappThreads();
     targets = new Map();
     const result = [];
     const rows = messenger()
@@ -58,6 +133,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     return result;
   }
   function messages() {
+    if (whatsapp()) return whatsappMessages();
     const rows = messenger()
       ? all('[data-scope="messages_table"]').filter(e => !e.querySelector('[data-scope="messages_table"]'))
       : all('#messageViewContainer .chat-message, #messageViewContainer .message-item, #messageViewContainer .msg-item');
@@ -124,6 +200,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     return bubble.left - bounds.left > bounds.right - bubble.right + 16;
   }
   function sendButton(input) {
+    if (whatsapp()) return whatsappSendButton(input);
     // Search only the composer's surrounding toolbar. Generic [title] wrappers
     // can duplicate the real accessible button and make one button look like two.
     for (let scope = input.parentElement, depth = 0; scope && depth < 10; scope = scope.parentElement, depth++) {
@@ -142,12 +219,14 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
   function snapshot(service) {
     if (zaloInactive()) return {service, state:'inactive', title:service, threads:[], messages:[], activeID:null, canSend:false,
       detail:'Zalo đang tạm dừng vì tab khác hoạt động hoặc phiên đã để lâu. Mở Kết nối và bấm Kích hoạt.'};
-    if (!allowed() || first('input[type="password"]')) {
+    if (!allowed() || first('input[type="password"]') ||
+        (whatsapp() && !first('#pane-side') && !composer())) {
       return {service, state:'login', title:service, threads:[], messages:[], activeID:null, canSend:false,
-        detail:'Mở Kết nối để đăng nhập trong cửa sổ của daemon.'};
+        detail: whatsapp() ? 'Mở Kết nối, rồi dùng WhatsApp trên điện thoại → Thiết bị liên kết để quét mã QR.'
+          : 'Mở Kết nối để đăng nhập trong cửa sổ của daemon.'};
     }
     const list = threads(), id = activeID(), input = composer();
-    const title = list.find(t => t.id === id)?.name || text(first('h2')) || service;
+    const title = list.find(t => t.id === id)?.name || (whatsapp() ? whatsappHeader() : text(first('h2'))) || service;
     const state = list.length || input ? 'ready' : 'unsupported';
     return {service, state, title, threads:list, messages:id ? messages() : [], activeID:id,
       diagnostics:{messageScopes:all('[data-scope="messages_table"]').length,
@@ -162,7 +241,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     const target = targets.get(id);
     if (!target?.isConnected) throw Error('Hội thoại không còn trong danh sách. Hãy tải lại.');
     if (!allowed()) throw Error('Trang kết nối không hợp lệ.');
-    if (messenger()) target.click(); else zaloClick(target);
+    if (location.hostname === 'chat.zalo.me') zaloClick(target); else target.click();
     return selectionReady(id);
   }
   const selectionReady = id => allowed() && activeID() === id && !!composer();
@@ -170,7 +249,8 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
   let sendSequence = 0;
   function sendAccepted(pending) {
     if (pending.editor?.isConnected && composer() === pending.editor && !text(pending.editor)) return true;
-    return messages().some(m => m.outgoing && !pending.previousMessages.has(m.id) && m.text.trim().endsWith(pending.wanted));
+    return messages().some(m => m.outgoing && !pending.previousMessages.has(m.id) &&
+      (whatsapp() ? m.text.trim() === pending.wanted : m.text.trim().endsWith(pending.wanted)));
   }
   // All bridge calls below are synchronous. The Swift daemon owns polling and
   // deadlines, because hidden WKWebViews can suspend page setTimeout callbacks.
@@ -186,7 +266,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
       throw Error('Trang web đang có bản nháp khác. Mở Kết nối để xử lý bản nháp trước; chưa gửi tin.');
     const ticket = String(++sendSequence);
     pendingSend = {ticket, id, value, wanted, stage:'place', clicked:false};
-    if (!messenger()) {
+    if (location.hostname === 'chat.zalo.me') {
       zaloClick(input);
       input.focus();
     }
@@ -225,7 +305,7 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     pending.editor = input;
     pending.stage = 'ack';
     pending.clicked = true; // Mark before dispatch, including exceptions mid-click.
-    if (messenger()) button.click(); else zaloClick(button);
+    if (location.hostname === 'chat.zalo.me') zaloClick(button); else button.click();
     return 'waiting';
   }
   function expireSend(ticket) {
@@ -239,6 +319,10 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
     // arbitrary script execution. Used to tune provider adapters locally.
     const unique = values => [...new Set(values)].slice(0, 80).join(' | ');
     return {
+      whatsappStructure: JSON.stringify({sidebar:all('#pane-side').length, rows:all('#pane-side [role="row"]').length,
+        selected:all('#pane-side [aria-selected="true"]').length, headers:all('#main header span[title]').length,
+        editors:all('#main footer [contenteditable="true"][role="textbox"]').length,
+        messages:all('#main .message-in, #main .message-out').length}),
       threadClasses: unique(all('.conv-item').map(e => e.className)),
       threadAttributeNames: unique(all('.conv-item').flatMap(e => e.getAttributeNames())),
       editorDescriptors: unique(all('[contenteditable], #richInput').map(e => [e.tagName,e.id,e.className,e.getAttribute('role'),e.getAttribute('contenteditable')].join(':'))),
