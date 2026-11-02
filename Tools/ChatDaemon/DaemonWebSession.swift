@@ -5,7 +5,7 @@ import WebKit
 final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWindowDelegate {
     let service: ChatService
     let webView: WKWebView
-    private let window: NSWindow
+    private let window: ChatConnectionWindow
     private var busy = false
     private var failure: String?
     private var needsReload = false
@@ -40,13 +40,14 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
             config.applicationNameForUserAgent = "Version/\(safariMajor).0 Safari/605.1.15"
         }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1100, height: 760), configuration: config)
-        window = NSWindow(contentRect: webView.frame,
+        window = ChatConnectionWindow(contentRect: webView.frame,
             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
         super.init()
         window.title = "Kết nối \(service.rawValue) — Chat Daemon"
         window.isReleasedWhenClosed = false
         window.contentView = webView
         window.delegate = self
+        window.onHide = { [weak self] in self?.hideWindow() }
         window.center()
         connectionFrame = window.frame
         webView.navigationDelegate = self
@@ -62,35 +63,22 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
     func showWindow() {
         recoverIfNeeded(force: true)
         connectionPresented = true
-        if let frame = connectionFrame, NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }) {
-            window.setFrame(frame, display: false)
-        }
-        else { window.center() }
-        window.collectionBehavior.remove(.ignoresCycle)
-        window.isExcludedFromWindowsMenu = false
-        window.makeKeyAndOrderFront(nil)
+        window.present(savedFrame: connectionFrame)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
-        connectionFrame = sender.frame
+    func hideWindow() {
+        if connectionPresented { connectionFrame = window.frame }
         connectionPresented = false
         keepRendererAlive()
+    }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        hideWindow()
         return false
     }
 
-    private func keepRendererAlive() {
-        // WhatsApp lazily mounts its timeline only in a visible WebView. Keep
-        // its normal-size renderer ordered behind the desktop, outside every
-        // screen, so closing Connection does not freeze or unmount history.
-        let left = NSScreen.screens.map { $0.frame.minX }.min() ?? 0
-        let bottom = NSScreen.screens.map { $0.frame.minY }.min() ?? 0
-        window.setFrameOrigin(NSPoint(x: left - window.frame.width - 1000,
-                                     y: bottom - window.frame.height - 1000))
-        window.collectionBehavior.insert(.ignoresCycle)
-        window.isExcludedFromWindowsMenu = true
-        window.orderBack(nil)
-    }
+    private func keepRendererAlive() { window.park() }
 
     func snapshot() async -> ChatSnapshot {
         guard !busy else { return .empty(service, "busy") }
@@ -128,7 +116,9 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
         let value = try await webView.callAsyncJavaScript(Self.bridge + "\nreturn JSON.stringify(bridge.diagnostics());",
             arguments: [:], in: nil, contentWorld: Self.world)
         guard let json = value as? String else { return [:] }
-        return try JSONDecoder().decode([String: String].self, from: Data(json.utf8))
+        var result = try JSONDecoder().decode([String: String].self, from: Data(json.utf8))
+        result["connectionWindow"] = "parked=\(window.isParked);presented=\(connectionPresented);onscreen=\(NSScreen.screens.contains { $0.frame.intersects(window.frame) });key=\(window.isKeyWindow);ignoresMouse=\(window.ignoresMouseEvents);transient=\(window.collectionBehavior.contains(.transient))"
+        return result
     }
 
     func perform(_ request: ChatRPCRequest) async throws {

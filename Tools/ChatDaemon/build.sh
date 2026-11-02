@@ -11,7 +11,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Notch Chat Daemon</string>
 <key>CFBundleExecutable</key><string>ChatDaemon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.2</string>
+<key>CFBundleShortVersionString</key><string>0.4.3</string>
 <key>LSUIElement</key><true/>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>
@@ -20,6 +20,6 @@ PLIST
 cp Tools/ChatDaemon/ChatBridge.js "$app/Contents/Resources/ChatBridge.js"
 xcrun swiftc -parse-as-library -swift-version 5 -target "${ARCH:-$(uname -m)}-apple-macosx14.0" \
   Shared/Chat/ChatProtocol.swift Tools/ChatDaemon/LocalRPC.swift \
-  Tools/ChatDaemon/SessionCookies.swift Tools/ChatDaemon/DaemonWebSession.swift Tools/ChatDaemon/main.swift \
+  Tools/ChatDaemon/SessionCookies.swift Tools/ChatDaemon/ConnectionWindow.swift Tools/ChatDaemon/DaemonWebSession.swift Tools/ChatDaemon/main.swift \
   -o "$app/Contents/MacOS/ChatDaemon"
 codesign --force --sign - "$app"

@@ -35,7 +35,7 @@ cấu trúc có thể làm adapter ngừng hoạt động.
 2. Đưa chuột lên notch, chọn biểu tượng **Chat** (hai bong bóng).
 3. Chọn **Messenger**, **Zalo** hoặc **WhatsApp**, bấm **Kết nối** nếu chưa đăng nhập.
 4. Đăng nhập trực tiếp trong cửa sổ của dịch vụ; nhập mật khẩu/OTP tại đó.
-5. Đóng cửa sổ kết nối sau khi đăng nhập: thao tác này chỉ ẩn WebView, không đăng xuất.
+5. Bấm **×** hoặc **Cmd+W** sau khi đăng nhập để ẩn cửa sổ Kết nối. **Cmd+H** ẩn tất cả cửa sổ Kết nối. Chat vẫn chạy nền, không đăng xuất; cửa sổ ẩn không xuất hiện trong Mission Control. Bấm **Kết nối** trong notch để mở lại.
 6. Chọn hội thoại trên hàng avatar, nhập nội dung rồi bấm gửi hoặc Enter.
 7. Escape để thu gọn; Home/Shelf để trở về chức năng khác. Chat giữ mở khi đang nhận focus bàn phím.
 
@@ -123,6 +123,13 @@ ditto "/đường/dẫn/Build/Products/Debug/Boring Notch.app" \
 codesign --verify --deep --strict "/Applications/Boring Notch Chat.app"
 open "/Applications/Boring Notch Chat.app"
 ```
+
+Keychain lưu khóa mã hóa WebKit dùng cho phiên chat. Bản ký ad hoc có designated
+requirement theo hash của code; cập nhật helper làm hash thay đổi nên macOS có thể
+hỏi lại quyền đọc khóa. Xác nhận trực tiếp trong hộp thoại macOS, không đưa mật khẩu
+máy vào notch/chat. Không xóa khóa hoặc profile để xử lý. Muốn nhận diện helper ổn
+định qua các bản cập nhật cần ký bằng cùng một chứng chỉ code signing ổn định;
+“Always Allow” cho một bản ad hoc không bảo đảm áp dụng cho các bản build khác.
 
 Không ghi đè app gốc `/Applications/boringNotch.app`. Fork đã tắt khởi động
 Sparkle updater để tránh bản upstream thay mất tính năng chat. Nếu muốn quay lại

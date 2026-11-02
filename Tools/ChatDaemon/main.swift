@@ -12,6 +12,13 @@ final class DaemonDelegate: NSObject, NSApplicationDelegate {
         start()
     }
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { false }
+
+    @objc private func hideConnectionWindows(_ sender: Any?) {
+        for session in sessions.values { session.hideWindow() }
+    }
+
     func start() {
         guard listener == nil else { return }
         NSApp.setActivationPolicy(.accessory)
@@ -52,9 +59,17 @@ final class DaemonDelegate: NSObject, NSApplicationDelegate {
             let menu = NSMenu()
             let root = NSMenuItem()
             let app = NSMenu()
+            let hide = app.addItem(withTitle: "Hide Connection Windows", action: #selector(hideConnectionWindows(_:)), keyEquivalent: "h")
+            hide.target = self
+            app.addItem(.separator())
             app.addItem(withTitle: "Quit Chat Daemon", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
             root.submenu = app
             menu.addItem(root)
+            let file = NSMenuItem(title: "File", action: nil, keyEquivalent: "")
+            let fileMenu = NSMenu(title: "File")
+            fileMenu.addItem(withTitle: "Close Connection Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+            file.submenu = fileMenu
+            menu.addItem(file)
             let edit = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
             let editMenu = NSMenu(title: "Edit")
             for (title, action, key) in [("Cut", "cut:", "x"), ("Copy", "copy:", "c"),
