@@ -93,6 +93,8 @@ app resource. Old WebView-host build is backed up at
 
 WhatsApp opens `https://web.whatsapp.com/` in its retained WebKit view. Link it
 from the phone's Linked devices screen; desktop-app credentials are not imported.
+Its user agent includes the Safari Version token for this OS's WebKit baseline;
+WhatsApp otherwise rejects the default WKWebView UA as an obsolete Safari.
 The persistent website store retains IndexedDB/local storage, and the cookie
 allowlist also includes `whatsapp.com`. Neither QR payloads nor cookies are
 included in RPC diagnostics.

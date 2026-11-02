@@ -22,6 +22,13 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
         // must continue processing events and bounded asynchronous commands.
         config.preferences.inactiveSchedulingPolicy = .none
         config.websiteDataStore = .default()
+        if service == .whatsapp {
+            // WKWebView's default UA omits Safari's Version token. WhatsApp
+            // rejects it as an obsolete Safari even with a current WebKit.
+            let osMajor = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+            let safariMajor = osMajor >= 26 ? osMajor : osMajor + 3
+            config.applicationNameForUserAgent = "Version/\(safariMajor).0 Safari/605.1.15"
+        }
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1100, height: 760), configuration: config)
         window = NSWindow(contentRect: webView.frame,
             styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
