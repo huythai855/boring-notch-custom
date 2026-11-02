@@ -17,8 +17,8 @@ fi
 ditto "$source_app" "$app"
 codesign --verify --deep --strict "$app"
 test -x "$app/Contents/Resources/Notch Chat Daemon.app/Contents/MacOS/ChatDaemon"
-lipo -verify_arch arm64 "$app/Contents/MacOS/Boring Notch"
-lipo -verify_arch arm64 "$app/Contents/Resources/Notch Chat Daemon.app/Contents/MacOS/ChatDaemon"
+lipo "$app/Contents/MacOS/Boring Notch" -verify_arch arm64
+lipo "$app/Contents/Resources/Notch Chat Daemon.app/Contents/MacOS/ChatDaemon" -verify_arch arm64
 
 cp LICENSE "$staging/LICENSE.txt"
 cat > "$staging/INSTALL.txt" <<'TXT'
