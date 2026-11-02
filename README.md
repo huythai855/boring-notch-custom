@@ -12,7 +12,7 @@ nhánh `codex/build-chat-release`.
 
 - Tab **Chat** cạnh Home/Shelf, nằm trong cùng cửa sổ và hình notch.
 - Chọn Messenger/Zalo/WhatsApp, chọn hội thoại, đọc và gửi tin nhắn văn bản.
-- WhatsApp: tên người gửi và avatar mặc định cho tin nhóm; giữ nguyên tag, tách trích dẫn khỏi nội dung trả lời.
+- Messenger/WhatsApp: tên người gửi và avatar mặc định cho tin nhóm; WhatsApp giữ nguyên tag, tách trích dẫn khỏi nội dung trả lời.
 - Chuột phải lên nội dung → **Sao chép tin nhắn**.
 - Khi chọn hội thoại, tải xuống cuối timeline để đọc tin mới nhất; nút mũi tên xuống cạnh tiêu đề cho phép tải lại.
 - Tự khôi phục tiến trình web bị dừng và chọn lại hội thoại, không tự gửi lại tin nhắn.

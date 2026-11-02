@@ -263,9 +263,49 @@ const bridge = globalThis.__notchChatBridge ??= (() => {
       const outgoing = messenger()
         ? isOutgoing(row, nodes, group)
         : row.classList.contains('me') || row.classList.contains('message-item--me') || !!row.querySelector('.me');
-      result.push({id: row.getAttribute('data-id') || row.id || hash(content + index), text: content.slice(0, 8000), outgoing});
+      result.push({id: row.getAttribute('data-id') || row.id || hash(content + index), text: content.slice(0, 8000), outgoing,
+        senderName: messenger() && !outgoing ? messengerSender(row) : null});
+    }
+    if (messenger() && !messengerGroupThread(result)) {
+      for (const message of result) message.senderName = null;
     }
     return result;
+  }
+  function messengerSender(row) {
+    // Each Messenger message has an accessible timestamp/sender container,
+    // including continuation bubbles whose visible sender heading is omitted.
+    // Never search a common timeline ancestor: that would borrow another sender.
+    for (let scope = row, depth = 0; scope && depth < 7; scope = scope.parentElement, depth++) {
+      if (scope.matches('[role="log"], [role="main"]') ||
+          rawAll('[data-scope="messages_table"]', scope).some(e =>
+            e !== row && !e.contains(row) && !row.contains(e))) break;
+      const label = scope.getAttribute('aria-label') || '';
+      const prefix = label.match(/^(?:Lúc|At)\s+\d{1,2}:\d{2}([^:\n]*):/i);
+      const accessibleName = prefix?.[1].split(',').pop();
+      if (accessibleName) return messengerSenderName(accessibleName);
+      const headings = rawAll('h4, [role="heading"][aria-level="4"]', scope).filter(e =>
+        !e.closest('[data-ad-rendering-role="text-message"], blockquote, [role="blockquote"]'));
+      if (headings.length === 1) return messengerSenderName(text(headings[0]));
+    }
+    return null;
+  }
+  function messengerSenderName(value) {
+    const name = normalizedName(value);
+    return name && name.length <= 150 && !/^(you|bạn|you sent|bạn đã gửi)$/i.test(name) ? name : null;
+  }
+  function messengerGroupThread(messages) {
+    const target = targets.get(activeID());
+    const entry = target?.closest('[role="row"]') || target?.closest('[role="gridcell"]') || target;
+    if (entry) {
+      const labels = [entry, ...rawAll('[aria-label]', entry)];
+      if (labels.some(e => /^(?:nhóm chat|group chat):/i.test(e.getAttribute('aria-label') || '')) ||
+          /^(?:nhóm chat|group chat):/im.test(text(entry))) return true;
+    }
+    if (all('button, [role="button"]').some(e =>
+        /^(?:tùy chọn nhóm|group options|thành viên trong đoạn chat|chat members)$/i.test(e.getAttribute('aria-label') || text(e)))) return true;
+    // When the sidebar is collapsed, distinct incoming senders are additional
+    // evidence of a group. A direct conversation retains its compact layout.
+    return new Set(messages.map(m => m.senderName).filter(Boolean)).size > 1;
   }
   function messageMetadata(element, row) {
     // Filter by DOM role first, rather than stripping lines out of the author's
