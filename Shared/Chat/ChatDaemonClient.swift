@@ -10,11 +10,15 @@ final class ChatDaemonClient: ObservableObject {
     @Published var sending = false
     @Published var selecting = false
     @Published var scrollRequest = 0
-    @Published var service: ChatService = .messenger
+    @Published var service: ChatService = ChatService(rawValue:
+        UserDefaults.standard.string(forKey: "notchChatLastService") ?? "") ?? .messenger {
+        didSet { UserDefaults.standard.set(service.rawValue, forKey: "notchChatLastService") }
+    }
     private var polling: Task<Void, Never>?
     private var generation = 0
     private var launchTime = Date.distantPast
     private var hasActionError = false
+    private init() { snapshot = .empty(service) }
     private let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 6

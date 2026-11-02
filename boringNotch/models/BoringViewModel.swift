@@ -201,8 +201,7 @@ class BoringViewModel: NSObject, ObservableObject {
         self.notchSize = expandedNotchSize
         self.notchState = .open
         
-        // Force music information update when notch is opened
-        MusicManager.shared.forceUpdate()
+        if coordinator.currentView == .home { MusicManager.shared.forceUpdate() }
     }
 
     func close() {
@@ -217,12 +216,9 @@ class BoringViewModel: NSObject, ObservableObject {
         self.coordinator.sneakPeek.show = false
         self.edgeAutoOpenActive = false
 
-        // Set the current view to shelf if it contains files and the user enables openShelfByDefault
-        // Otherwise, if the user has not enabled openLastShelfByDefault, set the view to home
-    if !ShelfStateViewModel.shared.isEmpty && Defaults[.openShelfByDefault] {
-            coordinator.currentView = .shelf
-        } else if !coordinator.openLastTabByDefault {
-            coordinator.currentView = .home
+        // Remembering the visible tab takes priority over automatic Shelf/Home.
+        if !coordinator.openLastTabByDefault {
+            coordinator.currentView = !ShelfStateViewModel.shared.isEmpty && Defaults[.openShelfByDefault] ? .shelf : .home
         }
     }
 

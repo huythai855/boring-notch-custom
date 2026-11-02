@@ -138,13 +138,13 @@ struct ContentView: View {
                     .onTapGesture {
                         doOpen()
                     }
-                    .conditionalModifier(Defaults[.enableGestures]) { view in
+                    .conditionalModifier(Defaults[.enableGestures] && !chatExpanded) { view in
                         view
                             .panGesture(direction: .down) { translation, phase in
                                 handleDownGesture(translation: translation, phase: phase)
                             }
                     }
-                    .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures]) { view in
+                    .conditionalModifier(Defaults[.closeGestureEnabled] && Defaults[.enableGestures] && !chatExpanded) { view in
                         view
                             .panGesture(direction: .up) { translation, phase in
                                 handleUpGesture(translation: translation, phase: phase)
@@ -210,6 +210,7 @@ struct ContentView: View {
         .frame(width: windowSize.width, height: windowSize.height, alignment: .top)
         .background(NotchChatWindowAccess(active: chatExpanded))
         .onChange(of: coordinator.currentView) { _, _ in
+            gestureProgress = .zero
             vm.updateOpenSize()
         }
         .onReceive(NotificationCenter.default.publisher(for: .openIntegratedChat)) { _ in
@@ -219,9 +220,14 @@ struct ContentView: View {
         }
         .onExitCommand { vm.close() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { note in
-            guard chatExpanded, !isHovering, let window = note.object as? NSWindow,
-                  window.screen?.displayUUID == vm.screenUUID else { return }
-            vm.close()
+            guard chatExpanded, !isHovering, let window = note.object as? BoringNotchSkyLightWindow,
+                  vm.screenUUID == nil || window.screen?.displayUUID == vm.screenUUID else { return }
+            // Ignore menu windows and transient focus changes while the chat
+            // window becomes key. Close after a genuine handoff to another app.
+            DispatchQueue.main.async {
+                guard self.chatExpanded, !self.isHovering, NSApp.keyWindow !== window else { return }
+                self.vm.close()
+            }
         }
         .compositingGroup()
         .scaleEffect(
@@ -605,7 +611,7 @@ struct ContentView: View {
     }
 
     private func handleUpGesture(translation: CGFloat, phase: NSEvent.Phase) {
-        guard vm.notchState == .open && !vm.isHoveringCalendar else { return }
+        guard vm.notchState == .open && !vm.isHoveringCalendar && coordinator.currentView != .chat else { return }
 
         withAnimation(animationSpring) {
             gestureProgress = (translation / Defaults[.gestureSensitivity]) * -20

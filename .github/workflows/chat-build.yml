@@ -35,6 +35,8 @@ jobs:
           node Tests/ChatDaemon/rich-messages.test.cjs
           xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
           build/rpc-tests
+          xcrun swiftc -parse-as-library boringNotch/models/PlaybackState.swift Tests/ChatDaemon/NowPlayingPolicyTests.swift -o build/now-playing-policy-tests
+          build/now-playing-policy-tests
       - name: Build and package Release
         run: bash Tools/package-chat-fork.sh
       - name: Upload packages

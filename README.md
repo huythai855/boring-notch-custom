@@ -17,6 +17,9 @@ nhánh `codex/build-chat-release`.
 - Khi chọn hội thoại, tải xuống cuối timeline để đọc tin mới nhất; nút mũi tên xuống cạnh tiêu đề cho phép tải lại.
 - Tự khôi phục tiến trình web bị dừng và chọn lại hội thoại, không tự gửi lại tin nhắn.
 - Enter để gửi, Shift+Enter để xuống dòng; Enter khi IME còn đang ghép chữ dành cho IME.
+- Nhớ tab Home/Shelf/Chat và dịch vụ chat vừa dùng khi mở lại; tự focus ô soạn khi hội thoại sẵn sàng.
+- Cuộn trong Chat chỉ cuộn nội dung, không kích hoạt gesture thu gọn notch. Home/Shelf vẫn dùng gesture như trước.
+- Phần nhạc bỏ qua nguồn chat/thông báo hệ thống, kể cả WebKit của daemon; tiếng thông báo vẫn phát bình thường.
 - Bản nháp riêng theo dịch vụ/hội thoại, giữ khi đổi tab hoặc thu gọn notch trong cùng lần chạy app.
 - Chat cao mặc định **380 pt**; chuyển Home ↔ Chat animate **0,24 giây**, giữ khung cửa sổ ổn định.
 - Daemon riêng giữ WebView và phiên đăng nhập; không cần bật VS Code hoặc cài extension.

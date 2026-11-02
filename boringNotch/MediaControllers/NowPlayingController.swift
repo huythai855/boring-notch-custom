@@ -16,7 +16,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
 
     // MARK: - Properties
     @Published private(set) var playbackState: PlaybackState = .init(
-        bundleIdentifier: "com.apple.Music"
+        bundleIdentifier: "", title: "", artist: "", album: ""
     )
 
     var playbackStatePublisher: AnyPublisher<PlaybackState, Never> {
@@ -65,6 +65,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     private let MRMediaRemoteSetShuffleModeFunction: @convention(c) (Int) -> Void
     private let MRMediaRemoteSetRepeatModeFunction: @convention(c) (Int) -> Void
 
+    private var sourcePolicy = NowPlayingSourcePolicy()
     private var process: Process?
     private var pipeHandler: JSONLinesPipeHandler?
     private var streamTask: Task<Void, Never>?
@@ -120,26 +121,32 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
 
     // MARK: - Protocol Implementation
     func play() async {
+        guard sourcePolicy.allowsCommands else { return }
         MRMediaRemoteSendCommandFunction(0, nil)
     }
 
     func pause() async {
+        guard sourcePolicy.allowsCommands else { return }
         MRMediaRemoteSendCommandFunction(1, nil)
     }
 
     func togglePlay() async {
+        guard sourcePolicy.allowsCommands else { return }
         MRMediaRemoteSendCommandFunction(2, nil)
     }
 
     func nextTrack() async {
+        guard sourcePolicy.allowsCommands else { return }
         MRMediaRemoteSendCommandFunction(4, nil)
     }
 
     func previousTrack() async {
+        guard sourcePolicy.allowsCommands else { return }
         MRMediaRemoteSendCommandFunction(5, nil)
     }
 
     func seek(to time: Double) async {
+        guard sourcePolicy.allowsCommands else { return }
         MRMediaRemoteSetElapsedTimeFunction(time)
     }
 
@@ -148,12 +155,14 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     }
     
     func toggleShuffle() async {
+        guard sourcePolicy.allowsCommands else { return }
         // MRMediaRemoteSendCommandFunction(6, nil)
         MRMediaRemoteSetShuffleModeFunction(playbackState.isShuffled ? 1 : 3)
         playbackState.isShuffled.toggle()
     }
     
     func toggleRepeat() async {
+        guard sourcePolicy.allowsCommands else { return }
         // MRMediaRemoteSendCommandFunction(7, nil)
         let newRepeatMode = (playbackState.repeatMode == .off) ? 3 : (playbackState.repeatMode.rawValue - 1)
         playbackState.repeatMode = RepeatMode(rawValue: newRepeatMode) ?? .off
@@ -161,6 +170,7 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     }
     
     func setVolume(_ level: Double) async {
+        guard sourcePolicy.allowsCommands else { return }
         // MediaRemote framework doesn't provide direct volume control for the active audio session
         // As a workaround, try to control the currently active music app directly
         let clampedLevel = max(0.0, min(1.0, level))
@@ -229,17 +239,25 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
     private func handleAdapterUpdate(_ update: NowPlayingUpdate) async {
         let payload = update.payload
         let diff = update.diff ?? false
+        sourcePolicy.observe(payload, isDiff: diff)
+        if sourcePolicy.isSuppressed {
+            if !playbackState.bundleIdentifier.isEmpty || playbackState.isPlaying {
+                playbackState = PlaybackState(bundleIdentifier: "", title: "", artist: "", album: "")
+            }
+            return
+        }
+        let inherit = diff && sourcePolicy.sourceIdentifier == playbackState.bundleIdentifier
 
-        var newPlaybackState = PlaybackState(bundleIdentifier: playbackState.bundleIdentifier)
+        var newPlaybackState = PlaybackState(bundleIdentifier: sourcePolicy.sourceIdentifier, title: "", artist: "", album: "")
         
-        newPlaybackState.title = payload.title ?? (diff ? self.playbackState.title : "")
-        newPlaybackState.artist = payload.artist ?? (diff ? self.playbackState.artist : "")
-        newPlaybackState.album = payload.album ?? (diff ? self.playbackState.album : "")
-        newPlaybackState.duration = payload.duration ?? (diff ? self.playbackState.duration : 0)
+        newPlaybackState.title = payload.title ?? (inherit ? self.playbackState.title : "")
+        newPlaybackState.artist = payload.artist ?? (inherit ? self.playbackState.artist : "")
+        newPlaybackState.album = payload.album ?? (inherit ? self.playbackState.album : "")
+        newPlaybackState.duration = payload.duration ?? (inherit ? self.playbackState.duration : 0)
         
         if let elapsedTime = payload.elapsedTime {
             newPlaybackState.currentTime = elapsedTime
-        } else if diff {
+        } else if inherit {
             if payload.playing == false {
                 let timeSinceLastUpdate = Date().timeIntervalSince(self.playbackState.lastUpdated)
                 newPlaybackState.currentTime = self.playbackState.currentTime + (self.playbackState.playbackRate * timeSinceLastUpdate)
@@ -253,14 +271,14 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
         
         if let shuffleMode = payload.shuffleMode {
             newPlaybackState.isShuffled = shuffleMode != 1
-        } else if !diff {
+        } else if !inherit {
             newPlaybackState.isShuffled = false
         } else {
             newPlaybackState.isShuffled = self.playbackState.isShuffled
         }
         if let repeatModeValue = payload.repeatMode {
             newPlaybackState.repeatMode = RepeatMode(rawValue: repeatModeValue) ?? .off
-        } else if !diff {
+        } else if !inherit {
             newPlaybackState.repeatMode = .off
         } else {
             newPlaybackState.repeatMode = self.playbackState.repeatMode
@@ -270,28 +288,26 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
             newPlaybackState.artwork = Data(
                 base64Encoded: artworkDataString.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-        } else if !diff {
+        } else if !inherit {
             newPlaybackState.artwork = nil
+        } else {
+            newPlaybackState.artwork = playbackState.artwork
         }
 
         if let dateString = payload.timestamp,
            let date = ISO8601DateFormatter().date(from: dateString) {
             newPlaybackState.lastUpdated = date
-        } else if !diff {
+        } else if !inherit {
             newPlaybackState.lastUpdated = Date()
         } else {
             newPlaybackState.lastUpdated = self.playbackState.lastUpdated
         }
 
-        newPlaybackState.playbackRate = payload.playbackRate ?? (diff ? self.playbackState.playbackRate : 1.0)
-        newPlaybackState.isPlaying = payload.playing ?? (diff ? self.playbackState.isPlaying : false)
-        newPlaybackState.bundleIdentifier = (
-            payload.parentApplicationBundleIdentifier ??
-            payload.bundleIdentifier ??
-            (diff ? self.playbackState.bundleIdentifier : "")
-        )
+        newPlaybackState.playbackRate = payload.playbackRate ?? (inherit ? self.playbackState.playbackRate : 1.0)
+        newPlaybackState.isPlaying = payload.playing ?? (inherit ? self.playbackState.isPlaying : false)
+        newPlaybackState.bundleIdentifier = sourcePolicy.sourceIdentifier
         
-        newPlaybackState.volume = payload.volume ?? (diff ? self.playbackState.volume : 0.5)
+        newPlaybackState.volume = payload.volume ?? (inherit ? self.playbackState.volume : 0.5)
         
         self.playbackState = newPlaybackState
         
@@ -323,28 +339,6 @@ final class NowPlayingController: ObservableObject, MediaControllerProtocol {
          }
      }
     
-}
-
-struct NowPlayingUpdate: Codable {
-    let payload: NowPlayingPayload
-    let diff: Bool?
-}
-
-struct NowPlayingPayload: Codable {
-    let title: String?
-    let artist: String?
-    let album: String?
-    let duration: Double?
-    let elapsedTime: Double?
-    let shuffleMode: Int?
-    let repeatMode: Int?
-    let artworkData: String?
-    let timestamp: String?
-    let playbackRate: Double?
-    let playing: Bool?
-    let parentApplicationBundleIdentifier: String?
-    let bundleIdentifier: String?
-    let volume: Double?
 }
 
 actor JSONLinesPipeHandler {

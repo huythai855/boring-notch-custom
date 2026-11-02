@@ -50,7 +50,9 @@ struct ExpandedItem {
 class BoringViewCoordinator: ObservableObject {
     static let shared = BoringViewCoordinator()
 
-    @Published var currentView: NotchViews = .home
+    @Published var currentView: NotchViews = .home {
+        didSet { UserDefaults.standard.set(currentView.rawValue, forKey: "notchLastSelectedTab") }
+    }
     @Published var helloAnimationRunning: Bool = false
     private var sneakPeekDispatch: DispatchWorkItem?
     private var expandingViewDispatch: DispatchWorkItem?
@@ -72,7 +74,7 @@ class BoringViewCoordinator: ObservableObject {
         }
     }
 
-    @AppStorage("openLastTabByDefault") var openLastTabByDefault: Bool = false {
+    @AppStorage("openLastTabByDefault") var openLastTabByDefault: Bool = true {
         didSet {
             if openLastTabByDefault {
                 alwaysShowTabs = true
@@ -102,6 +104,19 @@ class BoringViewCoordinator: ObservableObject {
     private var hudReplacementCancellable: AnyCancellable?
 
     private init() {
+        // Adopt the requested last-tab behavior once, while keeping the
+        // existing preference editable for later deliberate changes.
+        let preferences = UserDefaults.standard
+        if !preferences.bool(forKey: "chatLastTabMigrationV1") {
+            alwaysShowTabs = true
+            openLastTabByDefault = true
+            preferences.set(true, forKey: "chatLastTabMigrationV1")
+        }
+        if openLastTabByDefault,
+           let raw = preferences.string(forKey: "notchLastSelectedTab"),
+           let restored = NotchViews(rawValue: raw) {
+            currentView = restored == .shelf && !Defaults[.boringShelf] ? .home : restored
+        }
         // Perform migration from name-based to UUID-based storage
         if preferredScreenUUID == nil, let legacyName = legacyPreferredScreenName {
             // Try to find screen by name and migrate to UUID

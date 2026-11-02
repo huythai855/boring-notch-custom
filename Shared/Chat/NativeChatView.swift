@@ -135,9 +135,9 @@ struct ChatWorkspace: View {
             }
             .padding(12)
         }
-        .onAppear { client.start(); focusComposerIfReady() }
+        .onAppear { client.start(); focusComposerIfReady(reacquire: true) }
         .onReceive(NotificationCenter.default.publisher(for: .chatComposerFocusRequested)) { _ in
-            focusComposerIfReady()
+            focusComposerIfReady(reacquire: true)
         }
         .onChange(of: client.snapshot.canSend) { _, _ in focusComposerIfReady() }
         .onChange(of: client.selecting) { _, selecting in
@@ -148,9 +148,16 @@ struct ChatWorkspace: View {
         }
     }
 
-    private func focusComposerIfReady() {
+    private func focusComposerIfReady(reacquire: Bool = false) {
         guard client.snapshot.canSend, !client.sending, !client.selecting else { return }
-        composerFocused = true
+        if reacquire {
+            composerFocused = false
+            Task { @MainActor in
+                await Task.yield()
+                guard client.snapshot.canSend, !client.sending, !client.selecting else { return }
+                composerFocused = true
+            }
+        } else { composerFocused = true }
     }
 
     @ViewBuilder
