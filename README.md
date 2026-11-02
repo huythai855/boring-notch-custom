@@ -4,8 +4,9 @@ Chat nhanh Messenger và Zalo **ngay trong notch**, dùng giao diện SwiftUI na
 Bản fork dựa trên [TheBoredTeam/boring.notch](https://github.com/TheBoredTeam/boring.notch).
 Thông tin và credits của dự án gốc giữ tại [README.upstream.md](README.upstream.md); giấy phép giữ nguyên trong [LICENSE](LICENSE).
 
-Mốc hiện tại: **01/11/2026**, nhánh `feature/notch-chat`. Đây là checkout Git local;
-chưa tạo fork hoặc đẩy code lên GitHub.
+Mã nguồn fork riêng: [huythai855/boring-notch-custom](https://github.com/huythai855/boring-notch-custom),
+nhánh tính năng `feature/notch-chat`. Quy trình đóng gói arm64 nằm ở
+nhánh `codex/build-chat-release`.
 
 ## Hiện đã có
 
@@ -71,15 +72,21 @@ Nếu mở dự án bằng Xcode để build thủ công, cũng cần chạy
 `bash Tools/ChatDaemon/build.sh` trước vì project nhúng helper từ `build/`.
 
 Log: `build/daemon-build.log` và `build/integrated-build.log`.
-Host mặc định ở DerivedData của Xcode. Có thể tìm thư mục sản phẩm bằng:
+Host nằm ở `build/DerivedData/Build/Products/Debug/Boring Notch.app`.
+Có thể build cấu hình Release bằng `CONFIGURATION=Release bash Tools/build-chat-fork.sh`.
 
-```sh
-xcodebuild -project boringNotch.xcodeproj -scheme boringNotch \
-  -configuration Debug -destination 'platform=macOS,arch=arm64' \
-  -showBuildSettings | sed -n 's/^[[:space:]]*BUILT_PRODUCTS_DIR = //p' | head -n 1
-```
+### Đóng gói Release và build khi máy chưa có Xcode
 
-Trong thư mục kết quả, sản phẩm tên **Boring Notch.app**.
+`bash Tools/package-chat-fork.sh` build Release arm64, xác minh chữ ký host/helper,
+rồi tạo ZIP, DMG và `SHA256SUMS.txt` tại `build/packages/`. Mỗi lần đóng gói
+cần staging mới; xóa `build/package-stage` của lần trước nếu chạy lại.
+
+Workflow **Build Chat fork (Apple Silicon)** chạy trên GitHub Actions khi push
+nhánh `codex/build-chat-release`, không cần Apple Developer secrets.
+Tải artifact **Boring-Notch-Chat-arm64**, giải nén để lấy ZIP/DMG.
+Bản này ký ad hoc, chưa notarize; nếu macOS chặn bản tải về, cho phép mở trong
+**System Settings → Privacy & Security**. Gói cài đặt chỉ chứa app, không kèm
+cookie, token RPC hoặc dữ liệu tài khoản local.
 
 ## Cài hoặc cập nhật bản local
 

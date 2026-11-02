@@ -1,0 +1,50 @@
+name: Build Chat fork (Apple Silicon)
+
+on:
+  push:
+    branches: [codex/build-chat-release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chat-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcrun swiftc --version
+      - name: Chat regression tests
+        run: |
+          mkdir -p build
+          npm install --prefix build/chat-tests --ignore-scripts --no-audit --no-fund jsdom@26.1.0
+          node Tests/ChatDaemon/bridge.test.cjs
+          node Tests/ChatDaemon/messages.test.cjs
+          node Tests/ChatDaemon/zalo.test.cjs
+          xcrun swiftc -parse-as-library Tools/ChatDaemon/LocalRPC.swift Tests/ChatDaemon/RPCTests.swift -o build/rpc-tests
+          build/rpc-tests
+      - name: Build and package Release
+        run: bash Tools/package-chat-fork.sh
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Boring-Notch-Chat-arm64
+          path: build/packages/*
+          if-no-files-found: error
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-build-logs
+          path: build/*.log
+          if-no-files-found: ignore

@@ -18,7 +18,7 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 cp Tools/ChatDaemon/ChatBridge.js "$app/Contents/Resources/ChatBridge.js"
-xcrun swiftc -parse-as-library -swift-version 5 -target "$(uname -m)-apple-macosx14.0" \
+xcrun swiftc -parse-as-library -swift-version 5 -target "${ARCH:-$(uname -m)}-apple-macosx14.0" \
   Shared/Chat/ChatProtocol.swift Tools/ChatDaemon/LocalRPC.swift \
   Tools/ChatDaemon/SessionCookies.swift Tools/ChatDaemon/DaemonWebSession.swift Tools/ChatDaemon/main.swift \
   -o "$app/Contents/MacOS/ChatDaemon"
