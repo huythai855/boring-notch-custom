@@ -44,7 +44,9 @@ hoặc thu hồi phiên. Bản nháp native hiện **không lưu qua việc tho�
 - Node.js/npm chỉ cần nếu chạy các bài kiểm tra JavaScript.
 
 Script build tích hợp hiện chọn **arm64**; chưa xác minh bản fork trên Intel.
-Không cần tài khoản Apple Developer: bản local ký ad hoc.
+Không cần tài khoản Apple Developer: bản local ký ad hoc; script tắt Hardened
+Runtime cho kiểu ký không có Team ID này để nạp được framework nhúng. App sandbox
+và các entitlement của host vẫn được giữ.
 
 ```sh
 xcode-select -p
@@ -90,8 +92,9 @@ cookie, token RPC hoặc dữ liệu tài khoản local.
 
 ## Cài hoặc cập nhật bản local
 
-1. Thoát bản notch đang chạy bằng Quit; bản gốc và fork đang dùng cùng bundle ID,
-   nên không nên chạy đồng thời.
+1. Thoát bản notch đang chạy bằng Quit để tránh hai notch chồng nhau. Bản đóng gói
+   mới dùng bundle ID riêng `local.huythai.boringnotch.chat`, với settings/container
+   riêng để không xung đột chữ ký của bản gốc.
 2. Nếu có sửa helper/`ChatBridge.js`, mở cửa sổ **Kết nối**, chọn menu
    **Notch Chat Daemon → Quit Chat Daemon** trước khi thay app. Helper cũ có thể tiếp tục
    chạy sau khi host đã thoát. Nếu chỉ sửa host/UI, có thể giữ daemon đang chạy.
