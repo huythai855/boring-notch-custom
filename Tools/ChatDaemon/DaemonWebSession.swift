@@ -71,6 +71,7 @@ final class DaemonWebSession: NSObject, WKNavigationDelegate, WKUIDelegate, NSWi
         if connectionPresented { connectionFrame = window.frame }
         connectionPresented = false
         keepRendererAlive()
+        if NSApp.keyWindow == nil { NSApp.deactivate() }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
